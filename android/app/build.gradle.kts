@@ -13,6 +13,7 @@ android {
         applicationId = "com.riffado.meetings"
         minSdk = 26
         targetSdk = 35
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         versionCode = 1
         versionName = "0.1.0"
     }
@@ -65,6 +66,7 @@ android {
 }
 
 dependencies {
+    testImplementation(libs.junit)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

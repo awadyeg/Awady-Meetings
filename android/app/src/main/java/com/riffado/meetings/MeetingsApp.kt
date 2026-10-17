@@ -1,5 +1,7 @@
 package com.riffado.meetings
 
+import com.riffado.meetings.ai.SpeakerModelManager
+import com.riffado.meetings.data.VoiceProfileStore
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,6 +24,9 @@ class MeetingsApp : Application() {
         private set
     lateinit var transcriptionProviders: TranscriptionStore
         private set
+
+    val voiceProfiles by lazy { VoiceProfileStore(this) }
+    val speakerModel by lazy { SpeakerModelManager(this) }
 
     val appScope = CoroutineScope(SupervisorJob())
 

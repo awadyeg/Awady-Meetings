@@ -83,6 +83,8 @@ fun DetailScreen(
     onRename: (String) -> Unit,
     onRenameSpeaker: (speaker: String, name: String) -> Unit,
     onDelete: () -> Unit,
+    onRedetectSpeakers: () -> Unit = {},
+    detectingSpeakers: Boolean = false,
 ) {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableIntStateOf(if (recording.summary != null) 0 else 1) }
@@ -168,6 +170,9 @@ fun DetailScreen(
             ProcessButtons(recording, canProcess, onProcess)
             if (speakerIds.isNotEmpty()) {
                 SpeakerChips(speakerIds, recording.speakerNames) { editingSpeaker = it }
+                TextButton(onClick = onRedetectSpeakers, enabled = !recording.status.isBusy && !detectingSpeakers) {
+                    Text(if (detectingSpeakers) "Identifying speakers…" else "Re-detect speakers")
+                }
             }
 
             TabRow(selectedTabIndex = tab) {

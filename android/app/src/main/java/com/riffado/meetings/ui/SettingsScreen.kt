@@ -109,6 +109,8 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            MyVoiceSection()
+            HorizontalDivider()
             Text(stringResource(R.string.settings_presets), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(

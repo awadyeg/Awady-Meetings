@@ -69,7 +69,7 @@ class TranscriptChunkerTest {
         """.trimIndent()
 
         // Use small budget to force splitting
-        val chunks = TranscriptChunker.chunkTranscript(transcript, samplePrompt, 200)
+        val chunks = TranscriptChunker.chunkTranscript(transcript, samplePrompt, TranscriptChunker.estimateTokens(samplePrompt) + 60)
 
         assertTrue("Should split into chunks", chunks.size > 1)
 

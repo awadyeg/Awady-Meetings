@@ -1,15 +1,30 @@
 package com.riffado.meetings.data
 
+import kotlinx.serialization.Serializable
+
 /** Helpers for diarized transcripts made of `Speaker N: text` lines. */
 object Speakers {
     private val LINE = Regex("^Speaker (\\d+): ?(.*)$")
 
-    data class Turn(val speaker: String?, val text: String)
+    private val TIMING = Regex("^\\[(\\d+)-(\\d+)ms] ?(.*)$")
+
+    @Serializable
+    data class Turn(
+        val speaker: String?,
+        val text: String,
+        val startMs: Long? = null,
+        val endMs: Long? = null,
+        val audioSegment: String? = null,
+    )
 
     fun parse(transcript: String): List<Turn> =
         transcript.lines().filter { it.isNotBlank() }.map { line ->
             val m = LINE.matchEntire(line.trim())
-            if (m != null) Turn(m.groupValues[1], m.groupValues[2]) else Turn(null, line.trim())
+            if (m != null) {
+                val timing = TIMING.matchEntire(m.groupValues[2])
+                Turn(m.groupValues[1], timing?.groupValues?.get(3) ?: m.groupValues[2],
+                    timing?.groupValues?.get(1)?.toLongOrNull(), timing?.groupValues?.get(2)?.toLongOrNull())
+            } else Turn(null, line.trim())
         }
 
     /** Speaker numbers in order of first appearance. */

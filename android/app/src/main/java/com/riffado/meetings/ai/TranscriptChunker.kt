@@ -1,6 +1,5 @@
 package com.riffado.meetings.ai
 
-import android.util.Log
 import com.riffado.meetings.data.Speakers
 
 /**
@@ -9,7 +8,6 @@ import com.riffado.meetings.data.Speakers
  */
 object TranscriptChunker {
     
-    private const val TAG = "TranscriptChunker"
     
     // Rough approximation: 1 token ≈ 4 characters for English, ≈ 2 for Arabic/mixed
     private const val CHARS_PER_TOKEN_CONSERVATIVE = 2.5
@@ -27,13 +25,14 @@ object TranscriptChunker {
         transcript: String,
         promptTemplate: String,
         tokenBudget: Int = 5000,
+        logger: (String) -> Unit = {},
     ): List<String> {
         // Estimate prompt overhead in tokens
         val promptOverhead = estimateTokens(promptTemplate)
         val availableTokensForContent = tokenBudget - promptOverhead
         
         if (availableTokensForContent <= 0) {
-            Log.w(TAG, "Token budget too small for prompt overhead")
+            logger("Token budget too small for prompt overhead")
             return listOf(transcript)
         }
         
@@ -44,12 +43,12 @@ object TranscriptChunker {
             return listOf(transcript)
         }
         
-        Log.d(TAG, "Chunking transcript: ${transcript.length} chars, target $targetChars chars per chunk")
+        logger("Chunking transcript: ${transcript.length} chars, target $targetChars chars per chunk")
         
         // Parse into speaker turns
         val turns = Speakers.parse(transcript)
         
-        if (turns.isEmpty()) {
+        if (turns.none { it.speaker != null }) {
             // No speaker structure, just split by character count
             return splitBySize(transcript, targetChars)
         }
@@ -61,7 +60,7 @@ object TranscriptChunker {
         
         for (turn in turns) {
             val turnText = if (turn.speaker != null) {
-                "${turn.speaker}\n${turn.text}\n\n"
+                "Speaker ${turn.speaker}: ${turn.text}\n\n"
             } else {
                 "${turn.text}\n\n"
             }
@@ -99,7 +98,7 @@ object TranscriptChunker {
             chunks.add(currentChunk.toString().trim())
         }
         
-        Log.d(TAG, "Split into ${chunks.size} chunks")
+        logger("Split into ${chunks.size} chunks")
         return chunks
     }
     
@@ -133,7 +132,7 @@ object TranscriptChunker {
                 }
             }
             
-            chunks.add(text.substring(start, end).trim())
+            chunks.add(text.substring(start, end))
             start = end
         }
         

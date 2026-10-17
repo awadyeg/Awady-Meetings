@@ -47,7 +47,8 @@ object ElevenLabsClient {
     private fun format(obj: JsonObject): String {
         val words = obj["words"]?.jsonArray ?: return obj["text"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
         val numbers = LinkedHashMap<String, Int>()
-        val lines = mutableListOf<Pair<Int, StringBuilder>>()
+        data class Line(val number: Int, val text: StringBuilder, val start: Long?, var end: Long?)
+        val lines = mutableListOf<Line>()
         for (el in words) {
             val w = el.jsonObject
             if (w["type"]?.jsonPrimitive?.contentOrNull == "audio_event") continue
@@ -56,11 +57,19 @@ object ElevenLabsClient {
                 ?: return obj["text"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
             val n = numbers.getOrPut(speakerId) { numbers.size + 1 }
             val last = lines.lastOrNull()
-            if (last != null && last.first == n) last.second.append(token) else lines += n to StringBuilder(token)
+            val start = w["start"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.times(1000)?.toLong()
+            val end = w["end"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.times(1000)?.toLong()
+            if (last != null && last.number == n) {
+                last.text.append(token)
+                if (end != null) last.end = end
+            } else lines += Line(n, StringBuilder(token), start, end)
         }
         return lines
-            .filter { it.second.isNotBlank() }
-            .joinToString("\n") { "Speaker ${it.first}: ${it.second.toString().trim()}" }
+            .filter { it.text.isNotBlank() }
+            .joinToString("\n") {
+                val timing = if (it.start != null && it.end != null) "[${it.start}-${it.end}ms] " else ""
+                "Speaker ${it.number}: $timing${it.text.toString().trim()}"
+            }
     }
 
     private fun elevenLabsError(code: Int, body: String): String {

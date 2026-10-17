@@ -29,6 +29,8 @@ data class Recording(
     val titleIsDefault: Boolean = true,
     /** Display names keyed by speaker number ("1", "2", ...) from a diarized transcript. */
     val speakerNames: Map<String, String> = emptyMap(),
+    val autoNamedSpeakers: Set<String> = emptySet(),
+    val speakerTurns: List<Speakers.Turn> = emptyList(),
     /** Tags for categorization (e.g., "call" for call recordings). */
     val tags: Set<String> = emptySet(),
     /** Phone number for call recordings (null for meetings). */

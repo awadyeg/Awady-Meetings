@@ -35,3 +35,9 @@ CI (`.github/workflows/android.yml`) builds the debug APK on every push that tou
 3. Tap the record button. Grant microphone and notification permissions.
 4. Stop the recording. Transcript and summary appear when processing finishes.
 5. For existing recordings, use the re-transcribe button to transcribe again with the current provider.
+
+## Automatic speaker naming
+
+Settings → My voice downloads the speaker model once (about 26 MB) and records 30 seconds of enrollment audio. Embeddings are computed on the phone; enrollment audio is not uploaded or retained. The display name and match threshold can be changed in Settings. Re-detect speakers in a recording applies the current profile while preserving manual names.
+
+Munsit segment timestamps and ElevenLabs word timestamps are parsed from internal timed transcript lines into `speakerTurns` associated with their original audio segment. Displayed transcripts and summaries omit timing metadata. Independently transcribed audio files receive distinct speaker labels because provider speaker numbers are local to each request. Older recordings did not retain these timings, and Gemini currently returns untimed text. Re-transcribe with Munsit or ElevenLabs before voice matching these recordings; timing is never inferred from text length. A two-speaker call can name the remaining unnamed participant from the contact name or number even without a voice model, when the other speaker is already named. Ambiguous calls remain unnamed.

@@ -16,6 +16,7 @@ object CallRecorderDiagnostics {
     
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     
+    @Synchronized
     fun log(context: Context, event: String) {
         try {
             val timestamp = dateFormat.format(Date())
@@ -32,6 +33,7 @@ object CallRecorderDiagnostics {
         }
     }
     
+    @Synchronized
     fun read(context: Context): String {
         return try {
             val file = File(context.filesDir, LOG_FILE)
@@ -41,6 +43,7 @@ object CallRecorderDiagnostics {
         }
     }
     
+    @Synchronized
     fun clear(context: Context) {
         try {
             val file = File(context.filesDir, LOG_FILE)

@@ -86,7 +86,7 @@ object MunsitClient {
             val speakerNum = speakerMap.getOrPut(segment.speaker) { speakerMap.size + 1 }
             val text = segment.text.trim()
             if (text.isNotBlank()) {
-                lines.add("Speaker $speakerNum: $text")
+                lines.add("Speaker $speakerNum: [${(segment.start * 1000).toLong()}-${(segment.end * 1000).toLong()}ms] $text")
             }
         }
 

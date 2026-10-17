@@ -44,6 +44,9 @@ class ProcessingWorker(context: Context, params: WorkerParameters) : CoroutineWo
         return try {
             var transcript = recording.transcript
             var transcribedBy = recording.transcribedBy
+            val speakerTurns = mutableListOf<Speakers.Turn>()
+            var nextSpeaker = 1
+            var transcribed = false
             
             if (!summaryOnly || transcript.isNullOrBlank()) {
                 app.recordings.update(id) { it.copy(status = RecordingStatus.TRANSCRIBING, error = null) }
@@ -56,19 +59,35 @@ class ProcessingWorker(context: Context, params: WorkerParameters) : CoroutineWo
                     files.map { file ->
                         val (segmentTranscript, providerId, _) = coordinator.transcribe(file, settings.language)
                         transcribedBy = providerId // Track which provider succeeded
-                        segmentTranscript
+                        val labels = mutableMapOf<String, String>()
+                        val turns = Speakers.parse(segmentTranscript).map { turn ->
+                            turn.copy(
+                                speaker = turn.speaker?.let { labels.getOrPut(it) { (nextSpeaker++).toString() } },
+                                audioSegment = file.name,
+                            )
+                        }
+                        speakerTurns += turns
+                        turns.joinToString("\n") { turn ->
+                            if (turn.speaker == null) turn.text else "Speaker ${turn.speaker}: ${turn.text}"
+                        }
                     }
                     .filter { it.isNotBlank() }
                     .joinToString("\n\n")
                 }
                 
+                transcribed = true
                 app.recordings.update(id) { 
                     it.copy(
                         transcript = transcript,
-                        speakerNames = emptyMap(),
+                        speakerTurns = speakerTurns,
                         transcribedBy = transcribedBy,
                     )
                 }
+            }
+
+            if (transcribed && Speakers.ids(transcript).isNotEmpty() &&
+                (app.voiceProfiles.profile.value != null || recording.isCall)) {
+                SpeakerNaming.detect(app, id)
             }
 
             if (settings.canSummarize && !transcript.isNullOrBlank()) {
@@ -142,7 +161,7 @@ class ProcessingWorker(context: Context, params: WorkerParameters) : CoroutineWo
                 }
                 
                 // Split into chunks
-                val chunks = TranscriptChunker.chunkTranscript(transcript, Prompts.MEETING_SYSTEM, tokenBudget)
+                val chunks = TranscriptChunker.chunkTranscript(transcript, Prompts.MEETING_SYSTEM, tokenBudget) { Log.d(TAG, it) }
                 
                 if (chunks.size == 1) {
                     // Couldn't split further, try anyway

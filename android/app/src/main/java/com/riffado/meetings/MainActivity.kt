@@ -161,6 +161,12 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                     onBack = { screen = null },
                     onProcess = { summaryOnly -> viewModel.process(recording.id, summaryOnly) },
                     onRename = { viewModel.rename(recording.id, it) },
+                    detectingSpeakers = recording.id in viewModel.detectingSpeakers.collectAsStateWithLifecycle().value,
+                    onRedetectSpeakers = {
+                        viewModel.redetectSpeakers(recording.id) {
+                            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                        }
+                    },
                     onRenameSpeaker = { speaker, name -> viewModel.renameSpeaker(recording.id, speaker, name) },
                     onDelete = {
                         viewModel.delete(recording.id)

@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffado.meetings.MeetingsApp
+import com.riffado.meetings.ai.SpeakerNaming
 import com.riffado.meetings.ai.ProcessingWorker
 import com.riffado.meetings.callrecorder.CallParticipantResolver
 import com.riffado.meetings.data.AppSettings
@@ -13,10 +14,15 @@ import com.riffado.meetings.recording.RecorderState
 import com.riffado.meetings.recording.RecordingService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as MeetingsApp
+
+    private val detecting = MutableStateFlow<Set<String>>(emptySet())
+    val detectingSpeakers = detecting.asStateFlow()
 
     val recordings = app.recordings.recordings
     val settings = app.settings.settings
@@ -63,7 +69,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.recordings.update(id) {
                 val names = if (name.isBlank()) it.speakerNames - speaker else it.speakerNames + (speaker to name.trim())
-                it.copy(speakerNames = names)
+                it.copy(speakerNames = names, autoNamedSpeakers = it.autoNamedSpeakers - speaker)
+            }
+        }
+    }
+
+    fun redetectSpeakers(id: String, onResult: (String) -> Unit) {
+        if (id in detecting.value) return
+        detecting.value += id
+        viewModelScope.launch {
+            try {
+                onResult(SpeakerNaming.detect(app, id))
+            } finally {
+                detecting.value -= id
             }
         }
     }
