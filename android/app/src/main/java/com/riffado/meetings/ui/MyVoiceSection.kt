@@ -68,22 +68,32 @@ fun MyVoiceSection(vm: VoiceEnrollmentViewModel = viewModel()) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.enroll(name)
             else permission.launch(Manifest.permission.RECORD_AUDIO)
         }) { Text("Record my voice (30s)") }
-        if (state.busy) {
-            when (val download = model) {
-                is SpeakerModelState.Downloading -> {
-                    Text("Downloading voice model: ${download.bytes / 1024} / ${download.total / 1024} KB")
-                    LinearProgressIndicator(progress = { download.bytes.toFloat() / download.total }, modifier = Modifier.fillMaxWidth())
-                }
-                else -> if (state.recording) {
-                    Text("${30 - state.recordedSeconds} seconds remaining")
-                    LinearProgressIndicator(progress = { state.recordedSeconds / 30f }, modifier = Modifier.fillMaxWidth())
-                } else LinearProgressIndicator(Modifier.fillMaxWidth())
+        when (val progress = model) {
+            is SpeakerModelState.Preparing -> {
+                Text("Preparing voice model…")
+                LinearProgressIndicator(progress = { progress.bytes.toFloat() / progress.total }, modifier = Modifier.fillMaxWidth())
             }
-            Text("Read aloud at your normal pace, repeating as needed: Today I am recording my voice so my meetings are easier to follow. I enjoy sharing ideas, asking questions, and learning something new every day.")
+            is SpeakerModelState.Downloading -> {
+                Text("Downloading voice model: ${progress.bytes / 1024} / ${progress.total / 1024} KB")
+                LinearProgressIndicator(progress = { progress.bytes.toFloat() / progress.total }, modifier = Modifier.fillMaxWidth())
+            }
+            is SpeakerModelState.Error -> {
+                Text(progress.message, color = MaterialTheme.colorScheme.error)
+                TextButton(enabled = !state.busy, onClick = vm::retryModel) { Text("Retry") }
+            }
+            else -> Unit
+        }
+        if (state.busy) {
+            if (state.recording) {
+                Text("${30 - state.recordedSeconds} seconds remaining")
+                LinearProgressIndicator(progress = { state.recordedSeconds / 30f }, modifier = Modifier.fillMaxWidth())
+                Text("Read aloud at your normal pace, repeating as needed: Today I am recording my voice so my meetings are easier to follow. I enjoy sharing ideas, asking questions, and learning something new every day.")
+            } else if (model is SpeakerModelState.Ready) LinearProgressIndicator(Modifier.fillMaxWidth())
             TextButton(onClick = vm::cancel) { Text("Cancel") }
         }
-        state.message?.let { Text(it) }
-        if (model is SpeakerModelState.Error) Text((model as SpeakerModelState.Error).message, color = MaterialTheme.colorScheme.error)
+        state.message?.takeUnless {
+            model is SpeakerModelState.Preparing || model is SpeakerModelState.Downloading || model is SpeakerModelState.Error
+        }?.let { Text(it) }
         Text("Match threshold: ${"%.2f".format(Locale.US, threshold)}")
         Slider(value = threshold.coerceIn(0.30f, 0.90f), onValueChange = vm::setThreshold, valueRange = 0.30f..0.90f)
         OutlinedButton(enabled = profile != null && !state.busy, onClick = { confirmDelete = true }) { Text("Delete voice profile") }

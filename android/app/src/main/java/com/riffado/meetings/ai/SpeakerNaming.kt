@@ -22,7 +22,17 @@ object SpeakerNaming {
         if (Speakers.ids(recording.transcript).isEmpty()) return@withContext "No speaker labels in this transcript"
         var extractor: SherpaOnnxEmbeddingExtractor? = null
         try {
-            if (profile != null && app.speakerModel.isReady()) extractor = SherpaOnnxEmbeddingExtractor(app.speakerModel.modelFile)
+            if (profile != null) {
+                val model = try {
+                    app.speakerModel.ensureModel()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log("Voice model preparation failed: ${e.message}")
+                    null
+                }
+                if (model != null) extractor = SherpaOnnxEmbeddingExtractor(model)
+            }
             val result = SpeakerIdentifier(extractor, ::log).identifySpeakers(
                 recording, app.recordings.segmentFiles(recording).firstOrNull() ?: File(app.filesDir, "missing-audio"),
                 profile, threshold = app.voiceProfiles.threshold.value,
@@ -38,7 +48,7 @@ object SpeakerNaming {
             when {
                 result.matchedUser != null -> "Matched you as Speaker ${result.matchedUser} (${"%.2f".format(Locale.US, result.scores[result.matchedUser])})"
                 result.autoNamedLabels.isNotEmpty() -> "Named call participant"
-                profile != null && extractor == null -> "Download the voice model in Settings first"
+                profile != null && extractor == null -> "Prepare the voice model in Settings first"
                 result.failures.isNotEmpty() -> result.failures.values.first()
                 else -> "No match above threshold"
             }

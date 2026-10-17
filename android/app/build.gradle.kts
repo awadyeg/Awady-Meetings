@@ -60,6 +60,10 @@ android {
         jvmTarget = "17"
     }
 
+    androidResources {
+        noCompress += "onnx"
+    }
+
     buildFeatures {
         compose = true
     }

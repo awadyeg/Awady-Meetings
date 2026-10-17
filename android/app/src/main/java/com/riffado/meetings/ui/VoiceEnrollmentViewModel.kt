@@ -49,13 +49,28 @@ class VoiceEnrollmentViewModel(application: Application) : AndroidViewModel(appl
     fun permissionDenied() { mutableState.value = VoiceEnrollmentState(message = "Microphone permission is required") }
     fun cancel() { job?.cancel() }
 
+    fun retryModel() {
+        mutableState.value = mutableState.value.copy(message = null)
+        viewModelScope.launch {
+            try {
+                app.speakerModel.ensureModel()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (!mutableState.value.busy) {
+                    mutableState.value = mutableState.value.copy(message = e.message ?: "Voice model preparation failed")
+                }
+            }
+        }
+    }
+
     fun enroll(displayName: String) {
         if (job?.isActive == true) return
         job = viewModelScope.launch {
             mutableState.value = VoiceEnrollmentState(busy = true, message = "Preparing voice model…")
             try {
                 check(RecorderState.live.value.recordingId == null && app.recordings.recordings.value.none { it.status == RecordingStatus.RECORDING }) { "Stop the current recording before enrolling" }
-                val model = app.speakerModel.ensureDownloaded()
+                val model = app.speakerModel.ensureModel()
                 val samples = record()
                 mutableState.value = VoiceEnrollmentState(busy = true, recordedSeconds = 30, message = "Learning your voice…")
                 val embedding = SherpaOnnxEmbeddingExtractor(model).use { it.embed(samples) }
