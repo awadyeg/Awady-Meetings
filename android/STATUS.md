@@ -92,7 +92,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Tasks tab — Open/Done segments, due-date groups (overdue red, today orange), check circle with haptic, assignee chip, tappable source recording link, per-task "Add to calendar", "Add all N to calendar" (confirm dialog, then one calendar insert screen per task via `startActivities`), ⋯ menu: add all / extract from older recordings / re-extract all; banner "N recordings have no extracted tasks"; progress banner | done |
 | Calendar: `TaskCalendar` uses `Intent.ACTION_INSERT` on `CalendarContract.Events.CONTENT_URI` (no permission); all-day → UTC midnight + 1 day, timed → +30 min; description has assignee, deadline wording, source recording | done |
 | Detail ⋯ menu: "Extract tasks (n)" re-runs extraction for that recording | done |
-| Version bump 2 / 2.1.0-phase2 | todo |
+| Version bump: `versionCode 2`, `versionName "2.1.0-phase2"` (debug `versionNameSuffix "-v2"` removed so the installed name is exactly `2.1.0-phase2`; applicationId suffix `.v2` unchanged) | done |
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
@@ -118,16 +118,16 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 - Bookmarks are only captured for in-app meeting recordings (the call recorder does not publish `RecorderState`).
 - The previous "Save" in Settings navigated back; Settings is now a tab, so Save stays on the page (one Save saves app + call-recording settings).
 - If recording fails to start after tapping ⏺ (e.g. service error), the recorder view will pop up the next time a recording starts. Minor.
-- `versionCode` is still 1; updates install because the signature is the same.
 - Some strings in My voice progress messages are still English-only literals.
 
 ## Next steps
 1. Install `riffado-v2-redesign-phase1.apk` on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
 2. Fix device findings, then bump `versionCode`.
-3. Phase 2 remaining: version bump, full verification, APK.
+3. Phase 2 remaining: full verification, APK.
 4. Device test: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 2 item 3 — versionCode 2 / versionName 2.1.0-phase2.
 - 2026-10-18: Phase 2 item 2 — tasks + dates extraction (JSON), real Tasks tab, Add to calendar (single + all), re-extract on demand, tests, screenshots `tasks_*`.
 - 2026-10-18: Phase 2 item 1 — Ask AI (retrieval core + tests, chat screen, global + per-recording entry points, ar strings, screenshots `ask_ai_*`).
 - 2026-10-18: Phase 1 complete: provider screen restyle, RTL fixes, screenshot tests, idle animation fix. APK built (com.riffado.meetings.v2, ~90 MB).

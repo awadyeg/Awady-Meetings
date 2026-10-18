@@ -14,8 +14,8 @@ android {
         minSdk = 26
         targetSdk = 35
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "2.1.0-phase2"
     }
 
     signingConfigs {
@@ -30,7 +30,6 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".v2"
-            versionNameSuffix = "-v2"
             signingConfig = signingConfigs.getByName("debug")
             resValue("string", "app_name", "Awady meetings v2")
         }
