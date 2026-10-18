@@ -58,7 +58,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | RTL for mixed Arabic/English | done; re-checked in redesign |
 | **Phase 1 Liquid Glass redesign** | done — builds, lint clean (warnings only), unit tests green; NOT device-tested |
 | **Phase 2 Ask AI** (global + per-recording chat with cited, tappable sources) | done — unit-tested retrieval; NOT tested against a live provider |
-| **Phase 2 Tasks + dates extraction + calendar** | in progress |
+| **Phase 2 Tasks + dates extraction + calendar** | done — unit-tested parsing/grouping; NOT tested against a live provider or a real calendar app |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -73,7 +73,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Detail: glass player with waveform scrubber (real loudness envelope, cached), ±10 s, bookmark markers/chips, tap transcript line to seek + live line highlight, Summary/Transcript segments, glass speaker chips, more-menu | done |
 | Settings as iOS grouped inset lists (all existing settings kept; single Save in glass top bar saves app + call settings) | done |
 | Provider management restyle (numbered fallback order, status pills, iOS switches) | done |
-| Tasks tab placeholder (read-only open action items `- [ ]` from minutes) | done |
+| Tasks tab placeholder (read-only open action items `- [ ]` from minutes) | done (replaced by the real Tasks tab in Phase 2) |
 | Compose previews + Robolectric/Roborazzi screenshot tests (opt-in `-Pscreenshots`), downscaled copies in `docs/screenshots/` | done (Settings not rendered: needs `MeetingsApp`) |
 | RTL pass: per-string direction (`TextStyle.auto`), LTR isolation for phone numbers, mirrored tab bar/segments/back arrow/scrubber | done |
 | Looping animations only while recording (`LocalStaticAnimations` freezes them in tests) | done |
@@ -86,7 +86,12 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | `AskAiViewModel` — in-memory conversations per scope (global / recording id), last 6 turns as history, retries with smaller budget (×0.55, min 1500) on 413 / TPM 429 / context-length 400 | done |
 | `AskAiScreen` — glass top bar, user bubbles (tint) / assistant glass cards (markdown), numbered source chips → open recording, suggestions, typing indicator, glass composer; en + ar strings | done |
 | Entry points: ✨ in Home top bar + "Ask AI about your recordings" row under search (also reached from the Search tab), ✨ in Detail top bar (scoped to that recording) | done |
-| Tasks extraction (JSON), Tasks tab, calendar intents, re-extract | todo |
+| `ai/TaskExtractor.kt` — extraction prompt (meeting date as reference for relative dates, minutes + full transcript when it fits in 9000 chars), tolerant JSON parser (code fences, prose, top-level arrays, alias keys `task/owner/deadline/action_items`, string items, null-ish values, dedupe), due parsing (`YYYY-MM-DD` = all-day, `…THH:mm`, ISO offset); `TaskExtractorTest` (7 tests) | done |
+| `data/TaskItem` + `TaskStore` (`tasks.json`, atomic writes) + `TaskLogic` (Overdue / Today / Tomorrow / This week / Later / No date buckets, stable ids from normalised title, re-extraction keeps done state); `TaskLogicTest` (5 tests) | done |
+| `ai/TaskExtraction.run` — calls the summary provider, halves input on 413/TPM; hooked into `ProcessingWorker` right after the summary (non-fatal); `Recording.tasksExtractedAt`; tasks deleted with their recording | done |
+| Tasks tab — Open/Done segments, due-date groups (overdue red, today orange), check circle with haptic, assignee chip, tappable source recording link, per-task "Add to calendar", "Add all N to calendar" (confirm dialog, then one calendar insert screen per task via `startActivities`), ⋯ menu: add all / extract from older recordings / re-extract all; banner "N recordings have no extracted tasks"; progress banner | done |
+| Calendar: `TaskCalendar` uses `Intent.ACTION_INSERT` on `CalendarContract.Events.CONTENT_URI` (no permission); all-day → UTC midnight + 1 day, timed → +30 min; description has assignee, deadline wording, source recording | done |
+| Detail ⋯ menu: "Extract tasks (n)" re-runs extraction for that recording | done |
 | Version bump 2 / 2.1.0-phase2 | todo |
 
 ## Phase plan
@@ -98,6 +103,10 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 7. MCP server — expose recordings/transcripts/tasks to external agents.
 
 ## Known issues / notes
+- Task extraction runs once after each summary; recordings summarized before Phase 2 need "Extract from older recordings" (Tasks ⋯ menu or banner). Bulk extraction is sequential (one provider call per recording) and runs in the activity's ViewModel, so it stops if the app is killed.
+- Relative dates are resolved by the model against the recording date; the result is only as good as the model (Groq/Llama may get "next Thursday" wrong). Long recordings without a summary only send the first 9000 chars of transcript.
+- "Add all" opens one calendar insert screen per task (stacked); the user saves each. There is no silent bulk insert because that would need WRITE_CALENDAR.
+- Done state lives in `tasks.json`; if a re-extraction rewrites a task title, its done state is lost (matching is by normalised title).
 - Ask AI conversations are kept in memory only (lost when the process dies). Retrieval is keyword/BM25, not embeddings: synonyms or paraphrases with no shared words can miss; the fallback then uses the latest summaries.
 - Ask AI sends excerpts of transcripts/summaries to the configured summary provider (same privacy surface as summaries).
 - Nothing in the redesign has been tested on a physical device yet (Samsung, Android 14/15 is the target).
@@ -115,9 +124,11 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 ## Next steps
 1. Install `riffado-v2-redesign-phase1.apk` on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
 2. Fix device findings, then bump `versionCode`.
-3. Phase 2 remaining: tasks extraction + Tasks tab + calendar; version bump.
+3. Phase 2 remaining: version bump, full verification, APK.
+4. Device test: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 2 item 2 — tasks + dates extraction (JSON), real Tasks tab, Add to calendar (single + all), re-extract on demand, tests, screenshots `tasks_*`.
 - 2026-10-18: Phase 2 item 1 — Ask AI (retrieval core + tests, chat screen, global + per-recording entry points, ar strings, screenshots `ask_ai_*`).
 - 2026-10-18: Phase 1 complete: provider screen restyle, RTL fixes, screenshot tests, idle animation fix. APK built (com.riffado.meetings.v2, ~90 MB).
 - 2026-10-18: Settings + My voice redesigned as grouped inset lists; strings moved to resources (en + ar).

@@ -107,7 +107,59 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun delete(id: String) {
-        viewModelScope.launch { app.recordings.delete(id) }
+        viewModelScope.launch {
+            app.recordings.delete(id)
+            app.tasks.deleteForRecording(id)
+        }
+    }
+
+    // ---- Tasks ----
+    data class ExtractionProgress(val done: Int, val total: Int)
+
+    val tasks = app.tasks.tasks
+    private val extracting = MutableStateFlow<ExtractionProgress?>(null)
+    /** Progress of an on-demand task extraction run (null when idle). */
+    val taskExtraction = extracting.asStateFlow()
+
+    fun setTaskDone(id: String, done: Boolean) {
+        viewModelScope.launch { app.tasks.setDone(id, done) }
+    }
+
+    /** Recordings with minutes/transcript that never had tasks extracted (or all of them when [all]). */
+    fun extractableRecordings(all: Boolean): List<String> =
+        recordings.value.filter {
+            it.status == com.riffado.meetings.data.RecordingStatus.DONE &&
+                (!it.summary.isNullOrBlank() || !it.transcript.isNullOrBlank()) &&
+                (all || it.tasksExtractedAt == null)
+        }.map { it.id }
+
+    /** Extracts tasks for [ids] one by one (sequential to stay under provider rate limits). */
+    fun extractTasks(ids: List<String>, onResult: (String) -> Unit) {
+        if (extracting.value != null || ids.isEmpty()) return
+        if (!settings.value.canSummarize) {
+            onResult(app.getString(com.riffado.meetings.R.string.ask_not_configured)); return
+        }
+        extracting.value = ExtractionProgress(0, ids.size)
+        viewModelScope.launch {
+            var found = 0
+            var failed = 0
+            var lastError: String? = null
+            ids.forEachIndexed { i, id ->
+                try {
+                    found += com.riffado.meetings.ai.TaskExtraction.run(app, id)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    failed++
+                    lastError = e.message ?: e.javaClass.simpleName
+                }
+                extracting.value = ExtractionProgress(i + 1, ids.size)
+            }
+            extracting.value = null
+            val res = app.resources
+            val msg = res.getQuantityString(com.riffado.meetings.R.plurals.tasks_extract_result, found, found, ids.size - failed)
+            onResult(if (failed > 0) msg + "\n" + app.getString(com.riffado.meetings.R.string.tasks_extract_failed, failed, lastError) else msg)
+        }
     }
 
     fun saveSettings(value: AppSettings) = app.settings.save(value)

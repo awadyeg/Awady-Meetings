@@ -162,8 +162,7 @@
     <string name="section_older">Older</string>
     <string name="filter_everyone">Everyone</string>
     <string name="home_empty_title">No recordings yet</string>
-    <string name="tasks_preview_note">Open action items from your meeting minutes. Checking off and calendar sync are coming soon.</string>
-    <string name="tasks_empty">No action items yet. They appear here after a recording is summarized.</string>
+    <string name="tasks_empty">Action items and deadlines appear here automatically after a recording is summarized.</string>
     <string name="action_more">More</string>
     <string name="speakers_redetect">Re-detect speakers</string>
     <string name="speakers_identifying">Identifying speakers…</string>
@@ -210,4 +209,41 @@
     <string name="ask_no_recordings">There are no transcribed recordings yet.</string>
     <string name="ask_entry">Ask AI about your recordings</string>
     <string name="ask_entry_recording">Ask AI about this recording</string>
+    <string name="tasks_open_n">Open (%1$d)</string>
+    <string name="tasks_done_n">Done (%1$d)</string>
+    <string name="tasks_overdue">Overdue</string>
+    <string name="tasks_today">Today</string>
+    <string name="tasks_tomorrow">Tomorrow</string>
+    <string name="tasks_this_week">This week</string>
+    <string name="tasks_later">Later</string>
+    <string name="tasks_no_date">No date</string>
+    <string name="tasks_extract">Extract</string>
+    <string name="tasks_extract_missing">Extract from older recordings</string>
+    <string name="tasks_extract_all">Re-extract from all recordings</string>
+    <string name="tasks_extract_this">Extract tasks</string>
+    <string name="tasks_extracting">Extracting tasks… %1$d of %2$d</string>
+    <string name="tasks_extract_failed">%1$d failed: %2$s</string>
+    <string name="tasks_add_calendar">Add to calendar</string>
+    <string name="tasks_add_all_menu">Add all dated tasks to calendar</string>
+    <string name="tasks_no_calendar">No calendar app found</string>
+    <string name="tasks_cal_assignee">Assignee: %1$s</string>
+    <string name="tasks_cal_due">Due: %1$s</string>
+    <string name="tasks_cal_source">From recording: %1$s</string>
+    <string name="tasks_empty_open">All caught up</string>
+    <string name="tasks_empty_done">No completed tasks yet</string>
+    <string name="tasks_add_all_confirm_title">Add to calendar?</string>
+    <string name="tasks_add_all_confirm">Your calendar app will open once per task (%1$d) so you can save each event.</string>
+    <plurals name="tasks_missing">
+        <item quantity="one">%1$d recording has no extracted tasks yet</item>
+        <item quantity="other">%1$d recordings have no extracted tasks yet</item>
+    </plurals>
+    <plurals name="tasks_add_all">
+        <item quantity="one">Add %1$d task to calendar</item>
+        <item quantity="other">Add all %1$d to calendar</item>
+    </plurals>
+    <plurals name="tasks_extract_result">
+        <item quantity="one">Found %1$d task in %2$d recording(s)</item>
+        <item quantity="other">Found %1$d tasks in %2$d recording(s)</item>
+    </plurals>
+    <string name="tasks_earlier">Earlier</string>
 </resources>

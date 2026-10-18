@@ -36,7 +36,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,6 +61,8 @@ import com.riffado.meetings.ui.GlassTabBar
 import com.riffado.meetings.ui.MiniRecordingPill
 import com.riffado.meetings.ui.RecorderScreen
 import com.riffado.meetings.ui.TasksScreen
+import com.riffado.meetings.ui.TaskCalendar
+import com.riffado.meetings.ui.TaskExtractionUi
 import com.riffado.meetings.ui.rememberHaptics
 import com.riffado.meetings.ui.DetailScreen
 import com.riffado.meetings.ui.HomeScreen
@@ -179,7 +183,43 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                     focusSearch = searchTrigger,
                     onAsk = { screen = ASK },
                 )
-                AppTab.Tasks -> TasksScreen(recordings, onOpen = { screen = it })
+                AppTab.Tasks -> {
+                    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
+                    val extraction by viewModel.taskExtraction.collectAsStateWithLifecycle()
+                    var pendingAddAll by remember { mutableStateOf<List<com.riffado.meetings.data.TaskItem>?>(null) }
+                    val titleOf = { id: String -> recordings.firstOrNull { it.id == id }?.displayName }
+                    val toast = { msg: String -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+                    TasksScreen(
+                        tasks = tasks,
+                        recordings = recordings,
+                        onOpen = { screen = it },
+                        onToggle = { task, done -> viewModel.setTaskDone(task.id, done) },
+                        onAddToCalendar = { TaskCalendar.add(context, it, titleOf(it.recordingId)) },
+                        onAddAllToCalendar = { list ->
+                            if (list.size == 1) TaskCalendar.add(context, list[0], titleOf(list[0].recordingId)) else pendingAddAll = list
+                        },
+                        onExtractMissing = { viewModel.extractTasks(viewModel.extractableRecordings(all = false), toast) },
+                        onExtractAll = { viewModel.extractTasks(viewModel.extractableRecordings(all = true), toast) },
+                        missingCount = remember(recordings) { viewModel.extractableRecordings(all = false).size },
+                        extraction = extraction?.let { TaskExtractionUi(it.done, it.total) },
+                    )
+                    pendingAddAll?.let { list ->
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { pendingAddAll = null },
+                            title = { Text(stringResource(R.string.tasks_add_all_confirm_title)) },
+                            text = { Text(stringResource(R.string.tasks_add_all_confirm, list.size)) },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(onClick = {
+                                    pendingAddAll = null
+                                    TaskCalendar.addAll(context, list.map { it to titleOf(it.recordingId) })
+                                }) { Text(stringResource(R.string.tasks_add_calendar)) }
+                            },
+                            dismissButton = {
+                                androidx.compose.material3.TextButton(onClick = { pendingAddAll = null }) { Text(stringResource(R.string.action_cancel)) }
+                            },
+                        )
+                    }
+                }
                 AppTab.Settings -> SettingsScreen(
                     initial = settings,
                     callRecording = viewModel.callSettings.collectAsStateWithLifecycle().value,
@@ -246,6 +286,10 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                             },
                             onRenameSpeaker = { speaker, name -> viewModel.renameSpeaker(recording.id, speaker, name) },
                             onAsk = { screen = ASK_PREFIX + recording.id },
+                            onExtractTasks = {
+                                viewModel.extractTasks(listOf(recording.id)) { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+                            },
+                            taskCount = viewModel.tasks.collectAsStateWithLifecycle().value.count { it.recordingId == recording.id },
                             onDelete = {
                                 viewModel.delete(recording.id)
                                 screen = null

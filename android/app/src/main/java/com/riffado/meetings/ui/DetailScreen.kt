@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Forward10
@@ -94,6 +95,8 @@ fun DetailScreen(
     onRedetectSpeakers: () -> Unit = {},
     detectingSpeakers: Boolean = false,
     onAsk: () -> Unit = {},
+    onExtractTasks: (() -> Unit)? = null,
+    taskCount: Int = 0,
 ) {
     val context = LocalContext.current
     val c = Apple.colors
@@ -230,6 +233,19 @@ fun DetailScreen(
                                     leadingIcon = { Icon(Icons.Filled.PersonSearch, null) },
                                     enabled = !recording.status.isBusy && !detectingSpeakers,
                                     onClick = { menu = false; onRedetectSpeakers() },
+                                )
+                            }
+                            if (onExtractTasks != null && (recording.summary != null || recording.transcript != null)) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.tasks_extract_this) +
+                                                if (recording.tasksExtractedAt != null) " ($taskCount)" else "",
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.Filled.Checklist, null) },
+                                    enabled = !recording.status.isBusy,
+                                    onClick = { menu = false; onExtractTasks() },
                                 )
                             }
                             DropdownMenuItem(

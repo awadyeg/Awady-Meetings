@@ -25,6 +25,7 @@ class MeetingsApp : Application() {
     lateinit var transcriptionProviders: TranscriptionStore
         private set
 
+    val tasks by lazy { com.riffado.meetings.data.TaskStore(this) }
     val voiceProfiles by lazy { VoiceProfileStore(this) }
     val speakerModel by lazy { SpeakerModelManager(this) }
 

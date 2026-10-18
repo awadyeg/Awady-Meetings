@@ -41,6 +41,8 @@ data class Recording(
     val transcribedBy: String? = null,
     /** Bookmarks added while recording, as elapsed milliseconds from the start of the recording. */
     val bookmarks: List<Long> = emptyList(),
+    /** When tasks were last extracted from this recording's minutes (null = never). */
+    val tasksExtractedAt: Long? = null,
 ) {
     val isCall: Boolean get() = "call" in tags
     

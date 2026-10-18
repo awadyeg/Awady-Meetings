@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffado.meetings.data.Recording
+import com.riffado.meetings.data.TaskItem
 import com.riffado.meetings.data.RecordingStatus
 import com.riffado.meetings.data.Speakers
 import com.riffado.meetings.recording.LiveRecording
@@ -19,7 +20,8 @@ import kotlin.math.sin
 /** Sample data + previews for the Liquid Glass redesign (also rendered to PNG by the screenshot tests). */
 object PreviewData {
     private const val H = 3_600_000L
-    private val now = System.currentTimeMillis()
+    val now = System.currentTimeMillis()
+    private const val D = 24 * H
 
     val recordings = listOf(
         Recording(
@@ -59,6 +61,17 @@ object PreviewData {
             Speakers.Turn("2", "Done too, with bookmarks.", 12_000, 15_000, "d-0.m4a"),
         ),
         summary = "# Weekly product sync\n## Summary\nThe team agreed to ship the redesign next sprint.\n## Key points\n- Glass tab bar is done\n- الملخص بالعربي بيظهر من اليمين\n## Action items\n- [ ] Sara prepares the release notes",
+    )
+
+    private val today = com.riffado.meetings.data.TaskLogic.startOfDay(now)
+    val tasks = listOf(
+        TaskItem("t1", "1", "Prepare the release notes", assignee = "Sara", dueAt = today - D, dueText = "yesterday", createdAt = now - H),
+        TaskItem("t2", "2", "تسليم النسخة التجريبية", assignee = "أحمد حسن", dueAt = today + 15 * H + H / 2, allDay = false, createdAt = now - 2 * H),
+        TaskItem("t3", "1", "Review the onboarding flow", assignee = "Omar", dueAt = today + D, createdAt = now - H),
+        TaskItem("t4", "4", "Send the Android app budget to the client", dueAt = today + 4 * D, createdAt = now - 80 * H),
+        TaskItem("t5", "2", "مراجعة الـ API مع الفريق", dueAt = today + 12 * D, createdAt = now - 2 * H),
+        TaskItem("t6", "4", "Share the milestone deck", assignee = "Mohamed", createdAt = now - 80 * H),
+        TaskItem("t7", "1", "Book the demo room", dueAt = today - 2 * D, done = true, createdAt = now - H),
     )
 
     val askConversation = Conversation(
@@ -123,9 +136,22 @@ fun PreviewDetail(transcriptTab: Boolean = false) {
 @Composable
 fun PreviewTasks() {
     Box(Modifier.fillMaxSize()) {
-        TasksScreen(PreviewData.recordings, onOpen = {})
+        TasksScreen(
+            tasks = PreviewData.tasks, recordings = PreviewData.recordings, onOpen = {}, onToggle = { _, _ -> },
+            onAddToCalendar = {}, onAddAllToCalendar = {}, onExtractMissing = {}, onExtractAll = {},
+            missingCount = 2, extraction = null, now = PreviewData.now,
+        )
         GlassTabBar(AppTab.Tasks, {}, recording = false, onRecord = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
     }
+}
+
+@Composable
+fun PreviewTasksDone() {
+    TasksScreen(
+        tasks = PreviewData.tasks, recordings = PreviewData.recordings, onOpen = {}, onToggle = { _, _ -> },
+        onAddToCalendar = {}, onAddAllToCalendar = {}, onExtractMissing = {}, onExtractAll = {},
+        missingCount = 0, extraction = TaskExtractionUi(2, 5), now = PreviewData.now, initialSegment = 1,
+    )
 }
 
 @Composable

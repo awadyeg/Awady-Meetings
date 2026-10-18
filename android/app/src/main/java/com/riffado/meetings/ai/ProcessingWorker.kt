@@ -109,6 +109,14 @@ class ProcessingWorker(context: Context, params: WorkerParameters) : CoroutineWo
                         titleIsDefault = it.titleIsDefault && generatedTitle == null,
                     )
                 }
+                // Non-fatal: a failed task extraction must not fail the recording.
+                try {
+                    TaskExtraction.run(app, id)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Task extraction failed for $id", e)
+                }
             }
 
             val done = app.recordings.update(id) { it.copy(status = RecordingStatus.DONE, error = null) }

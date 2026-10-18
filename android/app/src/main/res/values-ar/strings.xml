@@ -166,8 +166,7 @@
     <string name="section_older">أقدم</string>
     <string name="filter_everyone">الكل</string>
     <string name="home_empty_title">لا توجد تسجيلات بعد</string>
-    <string name="tasks_preview_note">المهام المفتوحة من ملخصات اجتماعاتك. تحديد المهام كمنجزة ومزامنة التقويم قريبًا.</string>
-    <string name="tasks_empty">لا توجد مهام بعد. ستظهر هنا بعد تلخيص أي تسجيل.</string>
+    <string name="tasks_empty">المهام والمواعيد بتظهر هنا تلقائيًا بعد تلخيص أي تسجيل.</string>
     <string name="action_more">المزيد</string>
     <string name="speakers_redetect">إعادة التعرف على المتحدثين</string>
     <string name="speakers_identifying">جارٍ التعرف على المتحدثين…</string>
@@ -214,4 +213,53 @@
     <string name="ask_no_recordings">مفيش تسجيلات متفرّغة لسه.</string>
     <string name="ask_entry">اسأل الذكاء الاصطناعي عن تسجيلاتك</string>
     <string name="ask_entry_recording">اسأل الذكاء الاصطناعي عن التسجيل ده</string>
+    <string name="tasks_open_n">مفتوحة (%1$d)</string>
+    <string name="tasks_done_n">تمّت (%1$d)</string>
+    <string name="tasks_overdue">متأخرة</string>
+    <string name="tasks_today">النهارده</string>
+    <string name="tasks_tomorrow">بكرة</string>
+    <string name="tasks_this_week">الأسبوع ده</string>
+    <string name="tasks_later">بعدين</string>
+    <string name="tasks_no_date">من غير ميعاد</string>
+    <string name="tasks_extract">استخراج</string>
+    <string name="tasks_extract_missing">استخرج من التسجيلات القديمة</string>
+    <string name="tasks_extract_all">أعد الاستخراج من كل التسجيلات</string>
+    <string name="tasks_extract_this">استخراج المهام</string>
+    <string name="tasks_extracting">بستخرج المهام… %1$d من %2$d</string>
+    <string name="tasks_extract_failed">فشل %1$d: %2$s</string>
+    <string name="tasks_add_calendar">أضف للتقويم</string>
+    <string name="tasks_add_all_menu">أضف كل المهام اللي ليها ميعاد للتقويم</string>
+    <string name="tasks_no_calendar">مفيش تطبيق تقويم</string>
+    <string name="tasks_cal_assignee">المسؤول: %1$s</string>
+    <string name="tasks_cal_due">الميعاد: %1$s</string>
+    <string name="tasks_cal_source">من التسجيل: %1$s</string>
+    <string name="tasks_empty_open">مفيش مهام مفتوحة</string>
+    <string name="tasks_empty_done">لسه مفيش مهام خلصت</string>
+    <string name="tasks_add_all_confirm_title">إضافة للتقويم؟</string>
+    <string name="tasks_add_all_confirm">تطبيق التقويم هيفتح مرة لكل مهمة (%1$d) عشان تحفظ كل حدث.</string>
+    <plurals name="tasks_missing">
+        <item quantity="zero">مفيش تسجيلات من غير مهام</item>
+        <item quantity="one">تسجيل واحد لسه ما اتستخرجش منه مهام</item>
+        <item quantity="two">تسجيلين لسه ما اتستخرجش منهم مهام</item>
+        <item quantity="few">%1$d تسجيلات لسه ما اتستخرجش منها مهام</item>
+        <item quantity="many">%1$d تسجيل لسه ما اتستخرجش منه مهام</item>
+        <item quantity="other">%1$d تسجيل لسه ما اتستخرجش منه مهام</item>
+    </plurals>
+    <plurals name="tasks_add_all">
+        <item quantity="zero">مفيش مهام</item>
+        <item quantity="one">أضف مهمة واحدة للتقويم</item>
+        <item quantity="two">أضف المهمتين للتقويم</item>
+        <item quantity="few">أضف الـ %1$d مهام للتقويم</item>
+        <item quantity="many">أضف الـ %1$d مهمة للتقويم</item>
+        <item quantity="other">أضف الـ %1$d مهمة للتقويم</item>
+    </plurals>
+    <plurals name="tasks_extract_result">
+        <item quantity="zero">مالقيتش مهام في %2$d تسجيل</item>
+        <item quantity="one">لقيت مهمة واحدة في %2$d تسجيل</item>
+        <item quantity="two">لقيت مهمتين في %2$d تسجيل</item>
+        <item quantity="few">لقيت %1$d مهام في %2$d تسجيل</item>
+        <item quantity="many">لقيت %1$d مهمة في %2$d تسجيل</item>
+        <item quantity="other">لقيت %1$d مهمة في %2$d تسجيل</item>
+    </plurals>
+    <string name="tasks_earlier">قبل كده</string>
 </resources>
