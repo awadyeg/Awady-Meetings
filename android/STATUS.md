@@ -78,7 +78,9 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | RTL pass: per-string direction (`TextStyle.auto`), LTR isolation for phone numbers, mirrored tab bar/segments/back arrow/scrubber | done |
 | Looping animations only while recording (`LocalStaticAnimations` freezes them in tests) | done |
 
-### Phase 2 — Ask AI + Tasks (in progress)
+### Phase 2 — Ask AI + Tasks (done, awaiting device test)
+Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green (74 unit tests, lint 0 errors / 36 warnings, all pre-existing kinds); aapt2: `com.riffado.meetings.v2`, versionCode 2, versionName `2.1.0-phase2`, label "Awady meetings v2"; signed with the committed debug keystore (SHA-256 `f4874dbb…4812`). APK: `/workspace/riffado-apk/riffado-v2-phase2.apk`. Screenshots: `docs/screenshots/ask_ai_*.png`, `tasks_*.png`.
+
 | Item | Status |
 |---|---|
 | `ai/AskAi.kt` — retrieval: recordings → passages (summary + transcript chunks of ~1400 chars with speaker names), Arabic-aware tokenizer (normalisation, article stripping, en+ar stopwords), BM25 ranking (+title/contact and summary boosts, prefix match), context packed under a token budget (default 5000, chars/2.5 like `TranscriptChunker`), numbered sources `[n]`, fallback to latest summaries when nothing matches; `AskAiTest` (9 tests) | done |
@@ -96,7 +98,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
-2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _In progress._
+2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _Done, awaiting device test._
 4. Bookmarks + comments — markers during recording, comments on transcript lines.
 5. Export — PDF, Notion, WhatsApp share.
 6. Person page — all calls/meetings/tasks per contact.
@@ -121,12 +123,12 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 - Some strings in My voice progress messages are still English-only literals.
 
 ## Next steps
-1. Install `riffado-v2-redesign-phase1.apk` on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
+1. Install `riffado-v2-phase2.apk` (versionCode 2, installs over Phase 1) on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
 2. Fix device findings, then bump `versionCode`.
-3. Phase 2 remaining: full verification, APK.
 4. Device test: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 2 verified (build + lint + 74 tests), APK `riffado-v2-phase2.apk`.
 - 2026-10-18: Phase 2 item 3 — versionCode 2 / versionName 2.1.0-phase2.
 - 2026-10-18: Phase 2 item 2 — tasks + dates extraction (JSON), real Tasks tab, Add to calendar (single + all), re-extract on demand, tests, screenshots `tasks_*`.
 - 2026-10-18: Phase 2 item 1 — Ask AI (retrieval core + tests, chat screen, global + per-recording entry points, ar strings, screenshots `ask_ai_*`).

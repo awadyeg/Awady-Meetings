@@ -208,7 +208,6 @@
     <string name="ask_not_configured">Set up a summary provider in Settings (URL, key, model) to use Ask AI.</string>
     <string name="ask_no_recordings">There are no transcribed recordings yet.</string>
     <string name="ask_entry">Ask AI about your recordings</string>
-    <string name="ask_entry_recording">Ask AI about this recording</string>
     <string name="tasks_open_n">Open (%1$d)</string>
     <string name="tasks_done_n">Done (%1$d)</string>
     <string name="tasks_overdue">Overdue</string>
@@ -222,7 +221,7 @@
     <string name="tasks_extract_all">Re-extract from all recordings</string>
     <string name="tasks_extract_this">Extract tasks</string>
     <string name="tasks_extracting">Extracting tasks… %1$d of %2$d</string>
-    <string name="tasks_extract_failed">%1$d failed: %2$s</string>
+    <string name="tasks_extract_failed">Failed: %1$d (%2$s)</string>
     <string name="tasks_add_calendar">Add to calendar</string>
     <string name="tasks_add_all_menu">Add all dated tasks to calendar</string>
     <string name="tasks_no_calendar">No calendar app found</string>
