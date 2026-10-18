@@ -1,5 +1,14 @@
 package com.riffado.meetings
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import com.riffado.meetings.ui.McpUiState
+import com.riffado.meetings.ui.McpActions
+import com.riffado.meetings.mcp.McpService
+import com.riffado.meetings.mcp.McpRuntime
+import com.riffado.meetings.mcp.McpNetwork
+import androidx.compose.runtime.produceState
 import androidx.core.net.toUri
 import com.riffado.meetings.ui.PersonScreen
 import com.riffado.meetings.ui.PersonLogic
@@ -256,7 +265,26 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                         )
                     }
                 }
-                AppTab.Settings -> SettingsScreen(
+                AppTab.Settings -> {
+                    val app = context.applicationContext as MeetingsApp
+                    val mcpSettings by app.mcpSettings.settings.collectAsStateWithLifecycle()
+                    val mcpServer by McpRuntime.state.collectAsStateWithLifecycle()
+                    val addresses by produceState(McpNetwork.addresses(), mcpServer) {
+                        while (true) {
+                            value = withContext(Dispatchers.IO) { McpNetwork.addresses() }
+                            delay(5_000)
+                        }
+                    }
+                    SettingsScreen(
+                    mcp = McpUiState(mcpSettings, mcpServer, addresses),
+                    mcpActions = remember(app) {
+                        McpActions(
+                            onToggle = { on -> app.mcpSettings.setEnabled(on); McpService.sync(context) },
+                            onKeepAwake = { keep -> app.mcpSettings.setKeepAwake(keep); if (app.mcpSettings.settings.value.enabled) McpService.restart(context) },
+                            onPort = { port -> if (app.mcpSettings.setPort(port) && app.mcpSettings.settings.value.enabled) McpService.restart(context) },
+                            onRegenerate = { app.mcpSettings.regenerateToken() },
+                        )
+                    },
                     initial = settings,
                     callRecording = viewModel.callSettings.collectAsStateWithLifecycle().value,
                     onSave = {
@@ -267,6 +295,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                     onManageProviders = { screen = PROVIDER_MANAGEMENT },
                     onBack = { tab = AppTab.Home },
                 )
+                }
             }
         }
 

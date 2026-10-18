@@ -65,7 +65,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 3 Person page** | done — `PersonLogicTest`, screenshots; NOT device-tested |
 | **Phase 4 MCP server (Streamable HTTP, bearer auth, FGS)** | done — protocol + real-socket tests on localhost; NOT device-tested, not yet tried with a real agent client |
 | **Phase 4 MCP read-only tools** | done — `McpToolsTest` against fake data + over HTTP; `ask` NOT tried against a live LLM through MCP |
-| **Phase 4 Settings "Connect AI agents (MCP)"** | todo |
+| **Phase 4 Settings "Connect AI agents (MCP)"** | done — screenshots light / dark / ar; NOT device-tested |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -127,6 +127,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | Auth: `Authorization: Bearer rfd_…` (256-bit random, `McpToken`, stored encrypted via `KeystoreCipher`). Checked before routing, so a missing or wrong token gets 401 + `WWW-Authenticate: Bearer` on every path. Compared in constant time. Origin header: allowed only for localhost or the same IP the client dialled (DNS names refused → 403). `McpTokenTest` (4 tests) | done |
 | `mcp/McpService.kt` — foreground service (`specialUse`, subtype property in the manifest) started only while enabled; notification shows the URL and has Stop; optional partial wake lock + Wi-Fi low-latency lock ("keep awake", default on) so agents can connect with the screen off; port-in-use shown as an error. Re-synced on app launch and after boot / app update (`BootReceiver`) | done |
 | `mcp/McpTools.kt` — six read-only tools (annotated `readOnlyHint`; JSON Schema inputs; results = `structuredContent` object + the same JSON as a text block; user-facing failures → `isError: true`, bad arguments → -32602). Times are ISO 8601 with the phone's offset; date-only filters cover the whole local day. **list_recordings**: type / person / from / to / limit / offset, newest first, with people, status, summary preview, task / note / bookmark counts. **search_recordings**: all words must match across title, people, summary, transcript and notes (Arabic-normalised), ranked, with up to 3 snippets. **get_recording**: summary, transcript lines (speaker names, timestamps; `max_transcript_chars`, `transcript_truncated`), tasks, bookmarks, notes (re-anchored, orphans flagged). **list_tasks**: status / due range / person / recording, due-date order, overdue flag. **get_person**: exact or unique partial name (else the known people are listed), phone, calls / meetings, total time, open tasks, recordings. **ask**: the in-app Ask AI pipeline, now shared as `ai/AskAiEngine` (also used by the chat), scoped by person or recording, returns the answer + cited sources; 3-minute timeout. `McpToolsTest` (10 tests incl. end-to-end over HTTP) | done |
+| Settings → **Connect AI agents (MCP)** (`ui/McpSettings.kt`, applies immediately, not via Save): toggle with live status ("Running on port 8765" / starting / error, e.g. port in use); glass status card with request count and every reachable URL (Wi-Fi, Tailscale `100.64/10`, other; refreshed every 5 s; tap to copy); port field with Apply (1024–65535, restarts the server); "stay reachable with the screen off" (wake + Wi-Fi lock); token row (masked / show, copy marked sensitive on the clipboard, regenerate with a confirmation); client config (`mcp/McpClientConfig.kt`): **mcp-remote** for Claude Desktop (`npx -y mcp-remote <url> --allow-http --transport http-only --header Authorization:${RIFFADO_AUTH}` + env `RIFFADO_AUTH=Bearer …`, no spaces in args) or **HTTP URL** for Cursor / Claude Code (`type: http`, `url`, `headers.Authorization`); preview masks the token, "Copy config JSON" copies the real one. The JSON block is always LTR. All strings in Arabic (plurals for the request count, the bearer header in LTR isolates). `McpClientConfigTest` (2 tests); screenshots `docs/screenshots/mcp_settings_{light,dark,ar_rtl}.png` | done |
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
@@ -172,6 +173,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 4. Fix device findings (bump `versionCode` for each release), then the MCP server phase.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 4 item 4 — Settings "Connect AI agents (MCP)" (toggle, status, URLs, port, keep-awake, token copy / regenerate, client config snippets), Arabic strings, screenshots.
 - 2026-10-18: Phase 4 item 3 — MCP read-only tools (list/search/get recordings, tasks, person, ask) and `AskAiEngine` shared with the chat.
 - 2026-10-18: Phase 4 items 1–2 — embedded MCP server (Streamable HTTP, dual-era JSON-RPC) in a foreground service, bearer-token auth, Origin check, tests incl. a real localhost server.
 - 2026-10-18: Phase 3 verified (99 tests, lint clean), lint KTX fixes in new code, APK `riffado-v2-phase3.apk`.

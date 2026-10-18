@@ -97,6 +97,8 @@ fun SettingsScreen(
     onManageProviders: () -> Unit,
     onBack: () -> Unit,
     bottomInset: androidx.compose.ui.unit.Dp = 140.dp,
+    mcp: McpUiState? = null,
+    mcpActions: McpActions? = null,
 ) {
     val context = LocalContext.current
     val c = Apple.colors
@@ -235,6 +237,8 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(22.dp))
+                // ---- MCP server for AI agents (applies immediately, not via Save) -------------
+                if (mcp != null && mcpActions != null) McpSettingsSection(mcp, mcpActions)
                 InsetGroup(header = stringResource(R.string.settings_call_recording), footer = stringResource(R.string.settings_call_help)) {
                     row { InsetToggleRow(stringResource(R.string.settings_call_auto_record), callEnabled, { callEnabled = it }, icon = Icons.Filled.PhoneInTalk) }
                     row { AudioSourceRow(callAudioSource) { callAudioSource = it } }

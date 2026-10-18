@@ -43,6 +43,10 @@ class RedesignScreenshotTest {
     @Test fun exportSheetDark() = shot("export_sheet_dark", true) { PreviewExportSheet(busy = com.riffado.meetings.export.ExportKind.NOTION) }
     @Test fun personLight() = shot("person_light", false) { PreviewPerson() }
     @Test fun personDark() = shot("person_dark", true) { PreviewPerson() }
+    @Config(qualifiers = "w411dp-h1460dp-xxhdpi")
+    @Test fun mcpSettingsLight() = shot("mcp_settings_light", false) { PreviewMcpSettings() }
+    @Config(qualifiers = "w411dp-h1460dp-xxhdpi")
+    @Test fun mcpSettingsDark() = shot("mcp_settings_dark", true) { PreviewMcpSettings(httpStyle = true) }
     @Test fun askAiLight() = shot("ask_ai_light", false) { PreviewAskAi() }
     @Test fun askAiEmptyDark() = shot("ask_ai_empty_dark", true) { PreviewAskAi(empty = true) }
 
@@ -54,6 +58,9 @@ class RedesignScreenshotTest {
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun commentsArabicRtl() = shot("comments_ar_rtl", false) { PreviewComments(editLine = 1) }
+
+    @Config(qualifiers = "ar-w411dp-h1460dp-xxhdpi")
+    @Test fun mcpSettingsArabicRtl() = shot("mcp_settings_ar_rtl", false) { PreviewMcpSettings() }
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun personArabicRtl() = shot("person_ar_rtl", false) { PreviewPerson("أحمد حسن") }

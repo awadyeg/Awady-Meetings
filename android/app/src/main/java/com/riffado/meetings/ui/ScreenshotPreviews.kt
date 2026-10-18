@@ -1,5 +1,15 @@
 package com.riffado.meetings.ui
 
+import com.riffado.meetings.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -194,6 +204,28 @@ fun PreviewPerson(name: String = "Sara Ali") {
         person = person, tasks = PersonLogic.openTasks(person, PreviewData.personTasks), live = LiveRecording(),
         onBack = {}, onOpen = {}, onAsk = {}, onToggleTask = { _, _ -> }, onAddToCalendar = {}, now = PreviewData.now,
     )
+}
+
+/** Settings → Connect AI agents (MCP), rendered on its own (the full Settings screen needs MeetingsApp). */
+@Composable
+fun PreviewMcpSettings(enabled: Boolean = true, httpStyle: Boolean = false) {
+    val c = Apple.colors
+    val state = McpUiState(
+        settings = com.riffado.meetings.mcp.McpSettings(enabled = enabled, port = 8765, token = "rfd_9Jx2kQvW7mZpL4tN8sR1cY6bH3dF0gUaEoIiXwVnKqT", keepAwake = true),
+        server = if (enabled) com.riffado.meetings.mcp.McpServerState.Running(8765, PreviewData.now - 3_600_000, requests = 12) else com.riffado.meetings.mcp.McpServerState.Stopped,
+        addresses = listOf(
+            com.riffado.meetings.mcp.McpNetwork.LanAddress("192.168.1.42", "wlan0", com.riffado.meetings.mcp.McpNetwork.Kind.WIFI),
+            com.riffado.meetings.mcp.McpNetwork.LanAddress("100.101.7.23", "tun0", com.riffado.meetings.mcp.McpNetwork.Kind.TAILSCALE),
+        ),
+    )
+    Column(
+        Modifier.fillMaxSize().background(c.background).verticalScroll(rememberScrollState())
+            .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp, bottom = 40.dp),
+    ) {
+        LargeTitle(stringResource(R.string.settings_title))
+        Spacer(Modifier.height(8.dp))
+        McpSettingsSection(state, McpActions({}, {}, {}, {}), initialStyle = if (httpStyle) 1 else 0)
+    }
 }
 
 @Composable
