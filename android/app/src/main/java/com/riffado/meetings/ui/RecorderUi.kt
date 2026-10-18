@@ -72,6 +72,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riffado.meetings.R
@@ -81,11 +82,20 @@ import kotlinx.coroutines.delay
 /** Digits that don't jiggle while counting (tabular figures). */
 private val Tabular = "tnum"
 
+/** Set to true to freeze looping animations (screenshot tests, reduce-motion). */
+val LocalStaticAnimations = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 @Composable
 private fun PulsingDot(color: Color, active: Boolean, size: Int = 10) {
-    val t = rememberInfiniteTransition(label = "pulse")
-    val a by t.animateFloat(1f, 0.25f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "pulseAlpha")
-    Box(Modifier.size(size.dp).graphicsLayer { alpha = if (active) a else 1f }.clip(CircleShape).background(color))
+    val base = Modifier.size(size.dp)
+    if (active && !LocalStaticAnimations.current) {
+        // Infinite transitions only exist while recording, so idle screens stay idle (battery, tests).
+        val t = rememberInfiniteTransition(label = "pulse")
+        val a by t.animateFloat(1f, 0.25f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "pulseAlpha")
+        Box(base.graphicsLayer { alpha = a }.clip(CircleShape).background(color))
+    } else {
+        Box(base.clip(CircleShape).background(color))
+    }
 }
 
 /** Full-screen recording view (Voice Memos style). */
@@ -286,7 +296,7 @@ fun GlassTabBar(
             val selIndex = items.indexOfFirst { it?.tab == selected }.coerceAtLeast(0)
             val lensX by animateDpAsState(slot * selIndex, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow), label = "lens")
             Box(
-                Modifier.offset(x = lensX).width(slot).height(56.dp).clip(CircleShape)
+                Modifier.offset { IntOffset(lensX.roundToPx(), 0) }.width(slot).height(56.dp).clip(CircleShape)
                     .background(c.label.copy(alpha = if (c.isDark) 0.12f else 0.07f))
                     .specularEdge(CircleShape, 0.5f),
             )
@@ -324,10 +334,10 @@ fun GlassTabBar(
 private fun RecordButton(recording: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = Apple.colors
     val source = remember { MutableInteractionSource() }
-    val t = rememberInfiniteTransition(label = "ring")
-    val ring by t.animateFloat(1f, 1.18f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "ringScale")
     Box(modifier.size(78.dp), contentAlignment = Alignment.Center) {
-        if (recording) {
+        if (recording && !LocalStaticAnimations.current) {
+            val t = rememberInfiniteTransition(label = "ring")
+            val ring by t.animateFloat(1f, 1.18f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "ringScale")
             Box(Modifier.size(70.dp).graphicsLayer { scaleX = ring; scaleY = ring; alpha = 2f - ring * 1.4f }.clip(CircleShape).background(c.red.copy(alpha = 0.35f)))
         }
         Box(

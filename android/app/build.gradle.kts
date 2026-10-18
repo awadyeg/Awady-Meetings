@@ -67,10 +67,31 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+// Compose screenshot tests (Robolectric + Roborazzi) are opt-in because they download a large
+// Robolectric runtime: ./gradlew testDebugUnitTest -Pscreenshots  → PNGs in app/screenshots/
+tasks.withType<Test>().configureEach {
+    if (project.hasProperty("screenshots")) {
+        maxHeapSize = "3g"
+        systemProperty("roborazzi.test.record", "true")
+        systemProperty("riffado.screenshot.dir", rootProject.file("app/screenshots").absolutePath)
+    } else {
+        exclude("**/*ScreenshotTest*")
+    }
 }
 
 dependencies {
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

@@ -18,6 +18,8 @@ cd android
 export JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk   # sdk.dir in local.properties also works
 ./gradlew assembleDebug lintDebug testDebugUnitTest
 # APK: app/build/outputs/apk/debug/riffado-meetings-debug.apk
+# Optional screenshots (Robolectric native graphics; first run downloads ~300 MB):
+./gradlew testDebugUnitTest -Pscreenshots --tests '*RedesignScreenshotTest*'   # → app/screenshots/*.png (git-ignored)
 aapt2 dump badging app/build/outputs/apk/debug/riffado-meetings-debug.apk | head -1   # package: com.riffado.meetings.v2
 ```
 CI (GitHub Actions) uploads the artifact `riffado-meetings-debug`; download via
@@ -54,9 +56,9 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Chunked summaries for long calls | done |
 | Speaker naming (on-device voice profile + contact for the other side), re-detect | done (not device-tested) |
 | RTL for mixed Arabic/English | done; re-checked in redesign |
-| **Phase 1 Liquid Glass redesign** | in progress (see below) |
+| **Phase 1 Liquid Glass redesign** | done — builds, lint clean (warnings only), unit tests green; NOT device-tested |
 
-### Phase 1 — Liquid Glass redesign (in progress)
+### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
 |---|---|
 | Apple theme (colours, type, dark/light) | done |
@@ -68,9 +70,11 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Full-screen recorder (live waveform, timer, pause/bookmark/stop) + mini pill | done (bookmarks saved to `Recording.bookmarks`) |
 | Detail: glass player with waveform scrubber (real loudness envelope, cached), ±10 s, bookmark markers/chips, tap transcript line to seek + live line highlight, Summary/Transcript segments, glass speaker chips, more-menu | done |
 | Settings as iOS grouped inset lists (all existing settings kept; single Save in glass top bar saves app + call settings) | done |
-| Provider management restyle | not started |
+| Provider management restyle (numbered fallback order, status pills, iOS switches) | done |
 | Tasks tab placeholder (read-only open action items `- [ ]` from minutes) | done |
-| Compose preview screenshots | not started |
+| Compose previews + Robolectric/Roborazzi screenshot tests (opt-in `-Pscreenshots`), downscaled copies in `docs/screenshots/` | done (Settings not rendered: needs `MeetingsApp`) |
+| RTL pass: per-string direction (`TextStyle.auto`), LTR isolation for phone numbers, mirrored tab bar/segments/back arrow/scrubber | done |
+| Looping animations only while recording (`LocalStaticAnimations` freezes them in tests) | done |
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _In progress._
@@ -82,14 +86,26 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 7. MCP server — expose recordings/transcripts/tasks to external agents.
 
 ## Known issues / notes
-- Nothing in the redesign has been tested on a physical device yet.
-- Haze blur needs Android 12+; older devices get a frosted (non-blurred) fill by design.
-- No GH_TOKEN on the build box at times → commits stay local; push later with `git push origin ccr-e1dcbcac-mnypp3`.
+- Nothing in the redesign has been tested on a physical device yet (Samsung, Android 14/15 is the target).
+- Haze blur needs Android 12+; older devices get a frosted (non-blurred) fill by design. Robolectric screenshots also show the fallback (no RenderEffect).
+- Only floating chrome (top bar, tab bar, player, pill, round buttons) uses real backdrop blur; list cards use a translucent "glass card" fill for scroll performance.
+- The live waveform uses `MediaRecorder.maxAmplitude` sampled every 200 ms by `RecordingService`, so it is coarse (5 bars/s).
+- Detail waveform is decoded once per recording on-device (MediaCodec, streamed, RMS per 100 ms) and cached in `cacheDir/waveforms`; a long call may take a few seconds before bars appear (placeholder bars meanwhile).
+- Tap-to-seek in the transcript needs per-turn timestamps (`Recording.speakerTurns.startMs`); providers that return no timings fall back to a selectable, non-seekable transcript.
+- Bookmarks are only captured for in-app meeting recordings (the call recorder does not publish `RecorderState`).
+- The previous "Save" in Settings navigated back; Settings is now a tab, so Save stays on the page (one Save saves app + call-recording settings).
+- If recording fails to start after tapping ⏺ (e.g. service error), the recorder view will pop up the next time a recording starts. Minor.
+- `versionCode` is still 1; updates install because the signature is the same.
+- Some strings in My voice progress messages are still English-only literals.
 
 ## Next steps
-- Continue Phase 1 items in the table above.
+1. Install `riffado-v2-redesign-phase1.apk` on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
+2. Fix device findings, then bump `versionCode`.
+3. Phase 2: Ask AI (chat over transcripts; reuse the summary provider config).
+4. Tasks tab: persist checked state, due dates, calendar export (Phase 3).
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 1 complete: provider screen restyle, RTL fixes, screenshot tests, idle animation fix. APK built (com.riffado.meetings.v2, ~90 MB).
 - 2026-10-18: Settings + My voice redesigned as grouped inset lists; strings moved to resources (en + ar).
 - 2026-10-18: Detail screen redesign (player bar, waveform scrubber, seekable transcript).
 - 2026-10-18: Navigation shell (tabs + push transitions + recorder overlay), new Home, Recorder, mini pill, tab bar, Tasks placeholder, waveform engine (`Waveform.kt`), `Recording.bookmarks`.

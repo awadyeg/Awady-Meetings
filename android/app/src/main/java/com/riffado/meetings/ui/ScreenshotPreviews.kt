@@ -1,264 +1,137 @@
 package com.riffado.meetings.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.riffado.meetings.data.AppSettings
-import com.riffado.meetings.data.CallRecordingSettings
-import com.riffado.meetings.data.ProviderConfig
 import com.riffado.meetings.data.Recording
 import com.riffado.meetings.data.RecordingStatus
+import com.riffado.meetings.data.Speakers
 import com.riffado.meetings.recording.LiveRecording
-import android.media.MediaRecorder
+import kotlin.math.abs
+import kotlin.math.sin
 
-/**
- * Preview composables for screenshot documentation.
- * These can be rendered in Android Studio's preview pane or used with Paparazzi.
- */
+/** Sample data + previews for the Liquid Glass redesign (also rendered to PNG by the screenshot tests). */
+object PreviewData {
+    private const val H = 3_600_000L
+    private val now = System.currentTimeMillis()
 
-@Preview(
-    name = "Home Screen with Filter Tabs",
-    showBackground = true,
-    showSystemUi = true,
-)
-@Composable
-private fun PreviewHomeScreenWithFilters() {
-    val sampleRecordings = listOf(
+    val recordings = listOf(
         Recording(
-            id = "1",
-            title = "Team standup meeting",
-            createdAt = System.currentTimeMillis() - 3600000,
-            durationMs = 900000,
-            status = RecordingStatus.DONE,
+            id = "1", title = "Weekly product sync", createdAt = now - H, durationMs = 1_520_000, status = RecordingStatus.DONE,
             segments = listOf("1-0.m4a"),
-            tags = emptySet(),
+            summary = "# Weekly product sync\n## Summary\nThe team agreed to ship the redesign next sprint and move the MCP server to phase 2.\n## Action items\n- [ ] Sara prepares the release notes\n- [ ] Omar reviews the onboarding flow",
         ),
         Recording(
-            id = "2",
-            title = "Ahmed Hassan",
-            createdAt = System.currentTimeMillis() - 7200000,
-            durationMs = 300000,
-            status = RecordingStatus.DONE,
-            segments = listOf("2-0.m4a"),
-            tags = setOf("call"),
+            id = "2", title = "أحمد حسن", createdAt = now - 2 * H, durationMs = 312_000, status = RecordingStatus.DONE,
+            segments = listOf("2-0.m4a"), tags = setOf("call"), callContactName = "أحمد حسن", callNumber = "+20 100 123 4567",
+            summary = "## الملخص\nاتفقنا على تسليم النسخة التجريبية يوم الخميس ومراجعة الـ API مع الفريق.",
         ),
         Recording(
-            id = "3",
-            title = "Client project review",
-            createdAt = System.currentTimeMillis() - 10800000,
-            durationMs = 1800000,
-            status = RecordingStatus.RECORDED,
-            segments = listOf("3-0.m4a"),
-            tags = emptySet(),
+            id = "3", title = "+971 50 555 0101", createdAt = now - 26 * H, durationMs = 95_000, status = RecordingStatus.TRANSCRIBING,
+            segments = listOf("3-0.m4a"), tags = setOf("call"), callNumber = "+971 50 555 0101",
         ),
         Recording(
-            id = "4",
-            title = "+20 100 123 4567",
-            createdAt = System.currentTimeMillis() - 14400000,
-            durationMs = 180000,
-            status = RecordingStatus.DONE,
+            id = "4", title = "Client project review", createdAt = now - 80 * H, durationMs = 2_710_000, status = RecordingStatus.DONE,
             segments = listOf("4-0.m4a"),
-            tags = setOf("call"),
-        ),
-    )
-    
-    MeetingsTheme {
-        Surface {
-            HomeScreen(
-                recordings = sampleRecordings,
-                live = LiveRecording(),
-                configured = true,
-                onImport = {},
-                onOpen = {},
-                onSettings = {},
-            )
-        }
-    }
-}
-
-@Preview(
-    name = "Settings - Call Recording Section",
-    showBackground = true,
-    heightDp = 800,
-)
-@Composable
-private fun PreviewSettingsCallRecording() {
-    val settings = AppSettings(
-        transcription = ProviderConfig("https://api.groq.com/openai/v1", "***", "whisper-large-v3"),
-        summary = ProviderConfig("https://api.groq.com/openai/v1", "***", "llama-3.1-70b-versatile"),
-        language = "ar",
-        autoProcess = true,
-    )
-    
-    val callSettings = CallRecordingSettings(
-        enabled = true,
-        audioSource = MediaRecorder.AudioSource.VOICE_RECOGNITION,
-        autoProcess = true,
-        speakerphoneHint = false,
-    )
-    
-    MeetingsTheme {
-        Surface {
-            SettingsScreen(
-                initial = settings,
-                callRecording = callSettings,
-                onSave = {},
-                onSaveCallRecording = {},
-                onManageProviders = {},
-                onBack = {},
-            )
-        }
-    }
-}
-
-@Preview(
-    name = "Home Screen - Calls Filter Active",
-    showBackground = true,
-    showSystemUi = true,
-)
-@Composable
-private fun PreviewHomeScreenCallsOnly() {
-    val callRecordings = listOf(
-        Recording(
-            id = "1",
-            title = "Ahmed Hassan",
-            createdAt = System.currentTimeMillis() - 3600000,
-            durationMs = 300000,
-            status = RecordingStatus.DONE,
-            segments = listOf("1-0.m4a"),
-            tags = setOf("call"),
+            summary = "## Summary\nReviewed milestones with the client; budget approved for the Android app.",
         ),
         Recording(
-            id = "2",
-            title = "+20 100 123 4567",
-            createdAt = System.currentTimeMillis() - 7200000,
-            durationMs = 180000,
-            status = RecordingStatus.TRANSCRIBING,
-            segments = listOf("2-0.m4a"),
-            tags = setOf("call"),
+            id = "5", title = "Sara Ali", createdAt = now - 300 * H, durationMs = 640_000, status = RecordingStatus.FAILED,
+            segments = listOf("5-0.m4a"), tags = setOf("call"), callContactName = "Sara Ali", callNumber = "+971 55 222 3344",
         ),
     )
-    
-    MeetingsTheme {
-        Surface {
-            HomeScreen(
-                recordings = callRecordings,
-                live = LiveRecording(),
-                configured = true,
-                onImport = {},
-                onOpen = {},
-                onSettings = {},
-            )
-        }
-    }
-}
 
-@Preview(
-    name = "Detail Screen - Arabic Summary with English Terms (LTR Locale)",
-    showBackground = true,
-    showSystemUi = true,
-)
-@Composable
-private fun PreviewDetailScreenArabicSummary() {
-    val recording = Recording(
-        id = "1",
-        title = "متابعة إعدادات شبكة أبو ...",
-        createdAt = System.currentTimeMillis() - 3600000,
-        durationMs = 248000,
-        status = RecordingStatus.DONE,
-        segments = listOf("1-0.m4a"),
-        tags = setOf("call"),
-        transcript = """
-            sayed
-            ألو.
-            
-            awady
-            ألو.
-            
-            sayed
-            أنا مهيد مش ضامن إن هو يرجع ثكره، فأنا مش هيصي. router بأكامي بخصوص إل عندي حاجتين لازم بني. نحره أنلب لك إل وصله لإل إنت قلت عليها من قبل. إل بنها ولا خط adaptor يوجد مفيش adaptor طبي. بس هيصي واقفين على.
-            
-            awady
-            وخط بكمان.
-            
-            sayed
-            الخط، ألا أنا مش عارف بصراحة هو فيه ولا مفيهوش، بس مسأل مهيد.
-            
-            awady
-            الصورة كان باين إنه مفيهوش.
-        """.trimIndent(),
-        summary = """
-            ## تفتح
-            
-            * أنجز من قبل يحيب نحتاج إلى (special task) ووجود عمل خاص مراجعة.
-            * للمراجعة Messenger عبر awady سيتم إرسال ملف مهم إلى السرعة.
-            
-            ## Decisions
-            
-            * سيستخدم سائق لتوصيل المعدات إن الموقع.
-            * بأي طريقة router ولا adaptor طلب إل sayed سيتوقف ماتاحة.
-            
-            ## Action items
-            
-            * [ ] (sayed) في المودة adaptor يسأل مهيد عن وجود الخط أو
-            * [ ] (sayed) مع 4G router الحفقق من توفير Haidshow
-            * [ ] (sayed) من استلاك محمد لبطاقة SIM اشباع
-            * [ ] (awady) إلى special task إرسال الملف الخاص بإل Messenger عبر (sayed)
-            * [ ] (sayed) لتنسيق سائق لتوصيل المعدات إلى الموقع
-            * [ ] (awady) بعد انتهاء الاجتماعات awady مراجعة العمل المنجز من يحيب من قبل
-        """.trimIndent(),
-        speakerNames = mapOf("sayed" to "Sayed", "awady" to "Awady"),
+    val detail = Recording(
+        id = "d", title = "Weekly product sync", createdAt = now - H, durationMs = 1_520_000, status = RecordingStatus.DONE,
+        segments = listOf("d-0.m4a"), transcribedBy = "elevenlabs", bookmarks = listOf(65_000, 410_000),
+        speakerNames = mapOf("1" to "Mohamed", "2" to "Sara"),
+        transcript = "Speaker 1: Let's start with the redesign status.\nSpeaker 2: الشاشة الرئيسية خلصت والـ glass effect شغال.\nSpeaker 1: Great, and the recorder view?\nSpeaker 2: Done too, with bookmarks.",
+        speakerTurns = listOf(
+            Speakers.Turn("1", "Let's start with the redesign status.", 0, 4_000, "d-0.m4a"),
+            Speakers.Turn("2", "الشاشة الرئيسية خلصت والـ glass effect شغال.", 4_000, 9_000, "d-0.m4a"),
+            Speakers.Turn("1", "Great, and the recorder view?", 9_000, 12_000, "d-0.m4a"),
+            Speakers.Turn("2", "Done too, with bookmarks.", 12_000, 15_000, "d-0.m4a"),
+        ),
+        summary = "# Weekly product sync\n## Summary\nThe team agreed to ship the redesign next sprint.\n## Key points\n- Glass tab bar is done\n- الملخص بالعربي بيظهر من اليمين\n## Action items\n- [ ] Sara prepares the release notes",
     )
-    
-    MeetingsTheme {
-        Surface {
-            DetailScreen(
-                recording = recording,
-                segmentPaths = emptyList(),
-                canProcess = true,
-                onBack = {},
-                onProcess = {},
-                onRename = {},
-                onRenameSpeaker = { _, _ -> },
-                onDelete = {},
-            )
+
+    val levels = List(160) { i -> (abs(sin(i / 3.0)) * (0.3 + 0.7 * abs(sin(i / 17.0)))).toFloat() * 0.6f }
+}
+
+@Composable
+fun PreviewHome() {
+    Box(Modifier.fillMaxSize()) {
+        HomeScreen(PreviewData.recordings, LiveRecording(), configured = true, onImport = {}, onOpen = {}, onSettings = {})
+        GlassTabBar(AppTab.Home, {}, recording = false, onRecord = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
+    }
+}
+
+@Composable
+fun PreviewHomeRecording() {
+    val live = LiveRecording(recordingId = "x", elapsedMs = 754_000, level = 0.4f)
+    Box(Modifier.fillMaxSize()) {
+        HomeScreen(PreviewData.recordings, live, configured = false, onImport = {}, onOpen = {}, onSettings = {})
+        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            MiniRecordingPill(live, PreviewData.levels, {}, {}, {}, {}, Modifier.padding(bottom = 12.dp))
+            GlassTabBar(AppTab.Home, {}, recording = true, onRecord = {})
         }
     }
 }
 
-@Preview(
-    name = "Markdown - Mixed Arabic/English Content",
-    showBackground = true,
-    widthDp = 360,
-)
 @Composable
-private fun PreviewMarkdownMixedContent() {
-    val markdown = """
-        ## تفتح
-        
-        * أنجز من قبل يحيب نحتاج إلى (special task) ووجود عمل خاص مراجعة.
-        * للمراجعة Messenger عبر awady سيتم إرسال ملف مهم إلى السرعة.
-        
-        ## English Heading
-        
-        * This is an English bullet point with proper LTR alignment.
-        * [ ] This is a checkbox item in English.
-        
-        ## مشاكل تقنية
-        
-        * [ ] router يجب شراء جديد من المتجر.
-        * [x] adapter تم العثور على كابل في المخزن.
-    """.trimIndent()
-    
-    MeetingsTheme {
-        Surface {
-            Box(modifier = Modifier.padding(16.dp)) {
-                SimpleMarkdown(markdown)
-            }
-        }
+fun PreviewRecorder() {
+    RecorderScreen(
+        live = LiveRecording(recordingId = "x", elapsedMs = 754_000, level = 0.4f),
+        title = "Weekly product sync",
+        levels = PreviewData.levels,
+        bookmarks = listOf(65_000),
+        onMinimize = {}, onPause = {}, onResume = {}, onStop = {}, onBookmark = {},
+    )
+}
+
+@Composable
+fun PreviewDetail(transcriptTab: Boolean = false) {
+    val rec = if (transcriptTab) PreviewData.detail.copy(summary = null) else PreviewData.detail
+    DetailScreen(
+        recording = rec, segmentPaths = emptyList(), canProcess = true,
+        onBack = {}, onProcess = {}, onRename = {}, onRenameSpeaker = { _, _ -> }, onDelete = {},
+    )
+}
+
+@Composable
+fun PreviewTasks() {
+    Box(Modifier.fillMaxSize()) {
+        TasksScreen(PreviewData.recordings, onOpen = {})
+        GlassTabBar(AppTab.Tasks, {}, recording = false, onRecord = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
     }
 }
+
+@Preview(name = "Home – light", showSystemUi = true)
+@Composable
+private fun HomeLightPreview() = MeetingsTheme(darkTheme = false) { PreviewHome() }
+
+@Preview(name = "Home – dark", showSystemUi = true)
+@Composable
+private fun HomeDarkPreview() = MeetingsTheme(darkTheme = true) { PreviewHome() }
+
+@Preview(name = "Home – recording pill", showSystemUi = true)
+@Composable
+private fun HomeRecordingPreview() = MeetingsTheme(darkTheme = false) { PreviewHomeRecording() }
+
+@Preview(name = "Recorder – dark", showSystemUi = true)
+@Composable
+private fun RecorderPreview() = MeetingsTheme(darkTheme = true) { PreviewRecorder() }
+
+@Preview(name = "Detail – light", showSystemUi = true)
+@Composable
+private fun DetailPreview() = MeetingsTheme(darkTheme = false) { PreviewDetail() }
+
+@Preview(name = "Tasks – light", showSystemUi = true)
+@Composable
+private fun TasksPreview() = MeetingsTheme(darkTheme = false) { PreviewTasks() }

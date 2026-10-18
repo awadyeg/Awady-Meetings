@@ -40,6 +40,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -87,7 +88,7 @@ fun HomeScreen(
     focusSearch: Int = 0,
     bottomInset: androidx.compose.ui.unit.Dp = 140.dp,
 ) {
-    var filter by rememberSaveable { mutableStateOf(0) } // 0 all, 1 meetings, 2 calls
+    var filter by rememberSaveable { mutableIntStateOf(0) } // 0 all, 1 meetings, 2 calls
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedPerson by rememberSaveable { mutableStateOf<String?>(null) }
     val people = remember(recordings) { RecordingSearch.extractPeople(recordings) }
@@ -111,7 +112,7 @@ fun HomeScreen(
 
     val haze = rememberHazeState()
     val topPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TopBarHeight
-    val title = stringResource(R.string.home_title)
+    val title = stringResource(R.string.tab_home)
     CompositionLocalProvider(LocalHazeState provides haze) {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().hazeSource(haze)) {
@@ -239,7 +240,7 @@ private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogi
                     color = c.secondaryLabel,
                 )
                 if (rec.isCall && rec.callContactName != null && rec.callNumber != null) {
-                    Text(" · ${rec.callNumber}", style = AppleType.footnote, color = c.secondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(" · " + ltrIsolate(rec.callNumber), style = AppleType.footnote, color = c.secondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
                 if (isLive || rec.status != RecordingStatus.DONE) {
                     Text(" · ", style = AppleType.footnote, color = c.secondaryLabel)
@@ -257,7 +258,8 @@ private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogi
                 }
                 if (rec.status.isBusy) {
                     Spacer(Modifier.width(6.dp))
-                    CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = c.orange)
+                    if (LocalStaticAnimations.current) CircularProgressIndicator(progress = { 0.7f }, modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = c.orange)
+                    else CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = c.orange)
                 }
             }
             if (snippet != null) {

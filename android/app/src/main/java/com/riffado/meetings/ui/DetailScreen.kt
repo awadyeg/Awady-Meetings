@@ -293,8 +293,8 @@ fun DetailScreen(
 private fun MetaLine(recording: Recording) {
     val c = Apple.colors
     Column(Modifier.padding(horizontal = 20.dp)) {
-        val who = if (recording.isCall) listOfNotNull(recording.callContactName, recording.callNumber).joinToString(" · ") else null
-        if (!who.isNullOrBlank() && who != recording.title) {
+        val who = if (recording.isCall) listOfNotNull(recording.callContactName, recording.callNumber?.let(::ltrIsolate)).joinToString(" · ") else null
+        if (!who.isNullOrBlank() && who != recording.title && who != recording.callNumber?.let(::ltrIsolate)) {
             Text(who, style = AppleType.subheadline.auto(who), color = c.label)
         }
         Text(
@@ -402,7 +402,7 @@ private fun TranscriptView(recording: Recording, player: PlayerController?, wave
                         }
                         Spacer(Modifier.height(2.dp))
                     }
-                    Text(text, style = AppleType.body.auto(text), color = c.label)
+                    Text(text, style = AppleType.body.auto(text), color = c.label, modifier = Modifier.fillMaxWidth())
                 }
                 previous = turn.speaker
             }

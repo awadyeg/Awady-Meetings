@@ -65,12 +65,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Text style with paragraph direction taken from the content (Arabic → RTL, Latin → LTR). */
-fun TextStyle.auto(text: String): TextStyle =
-    copy(textDirection = TextDirectionDetector.detectDirection(text), textAlign = TextAlign.Start)
+fun TextStyle.auto(text: String): TextStyle {
+    // Strings with no strong letters (phone numbers, times) read left-to-right even in Arabic UI.
+    val dir = TextDirectionDetector.detectDirection(text).let { if (it == TextDirection.Content) TextDirection.Ltr else it }
+    return copy(textDirection = dir, textAlign = TextAlign.Start)
+}
+
+/** Wraps a fragment in a Unicode left-to-right isolate so numbers keep their order inside RTL text. */
+fun ltrIsolate(text: String): String = "\u2066$text\u2069"
 
 // ---------------------------------------------------------------------------------------------
 // Navigation chrome
@@ -174,7 +181,7 @@ fun SegmentedControl(
         )
         Box(
             Modifier
-                .offset(x = offset)
+                .offset { IntOffset(offset.roundToPx(), 0) }
                 .width(segment)
                 .fillMaxHeight()
                 .shadow(3.dp, RoundedCornerShape(16.dp))
@@ -264,7 +271,7 @@ fun IosSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boo
             },
     ) {
         Box(
-            Modifier.offset(x = knob, y = 2.dp).size(27.dp)
+            Modifier.offset { IntOffset(knob.roundToPx(), 2.dp.roundToPx()) }.size(27.dp)
                 .shadow(3.dp, CircleShape).clip(CircleShape).background(Color.White),
         )
     }
