@@ -187,4 +187,11 @@
     <string name="voice_record">سجّل صوتي (30 ثانية)</string>
     <string name="voice_threshold">حد المطابقة: %1$s</string>
     <string name="voice_delete">حذف بصمة الصوت</string>
+    <string name="providers_title">المزودون</string>
+    <string name="providers_order">ترتيب التبديل</string>
+    <string name="providers_help">يتم تجربة المزودين بالترتيب. لما رصيد واحد يخلص، التالي بيشتغل تلقائيًا، والأول بيرجع في يوم تجديد الباقة. اضغط على أي مزود لتعديل المفتاح والموديل ويوم التجديد.</string>
+    <string name="providers_no_key">لا يوجد مفتاح</string>
+    <string name="providers_exhausted_until">الرصيد خلص حتى %1$s</string>
+    <string name="providers_active">نشط</string>
+    <string name="providers_off">متوقف</string>
 </resources>

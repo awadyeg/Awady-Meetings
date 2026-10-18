@@ -183,4 +183,11 @@
     <string name="voice_record">Record my voice (30s)</string>
     <string name="voice_threshold">Match threshold: %1$s</string>
     <string name="voice_delete">Delete voice profile</string>
+    <string name="providers_title">Providers</string>
+    <string name="providers_order">Fallback order</string>
+    <string name="providers_help">Providers are tried in order. When one runs out of credits the next one is used automatically, and the first one comes back on its billing reset day. Tap a provider to set its key, model and reset day.</string>
+    <string name="providers_no_key">No API key</string>
+    <string name="providers_exhausted_until">Out of credits until %1$s</string>
+    <string name="providers_active">Active</string>
+    <string name="providers_off">Off</string>
 </resources>
