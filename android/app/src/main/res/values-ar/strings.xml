@@ -175,4 +175,16 @@
     <string name="detail_transcribed_by">فرّغه %1$s</string>
     <string name="player_back10">رجوع 10 ثوانٍ</string>
     <string name="player_forward10">تقديم 10 ثوانٍ</string>
+    <string name="settings_fallback_chain">سلسلة المزودين الاحتياطية</string>
+    <string name="settings_fallback_chain_desc">ElevenLabs ← Munsit ← Gemini، المفاتيح وأيام التجديد</string>
+    <string name="diagnostics_refresh">تحديث</string>
+    <string name="voice_title">صوتي</string>
+    <string name="voice_footer">سجّل 30 ثانية بصوتك مرة واحدة. بعد كل مكالمة، المتحدث اللي صوته زي صوتك هياخد اسمك، والتاني هياخد اسم جهة الاتصال. كل ده بيتم على الموبايل.</string>
+    <string name="voice_display_name">الاسم المعروض</string>
+    <string name="voice_profile">بصمة الصوت</string>
+    <string name="voice_enrolled_on">مسجّلة %1$s</string>
+    <string name="voice_not_enrolled">غير مسجّلة</string>
+    <string name="voice_record">سجّل صوتي (30 ثانية)</string>
+    <string name="voice_threshold">حد المطابقة: %1$s</string>
+    <string name="voice_delete">حذف بصمة الصوت</string>
 </resources>

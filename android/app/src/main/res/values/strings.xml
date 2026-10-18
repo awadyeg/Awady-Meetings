@@ -171,4 +171,16 @@
     <string name="detail_transcribed_by">Transcribed by %1$s</string>
     <string name="player_back10">Back 10 seconds</string>
     <string name="player_forward10">Forward 10 seconds</string>
+    <string name="settings_fallback_chain">Provider fallback chain</string>
+    <string name="settings_fallback_chain_desc">ElevenLabs → Munsit → Gemini, keys and reset days</string>
+    <string name="diagnostics_refresh">Refresh</string>
+    <string name="voice_title">My voice</string>
+    <string name="voice_footer">Record 30 seconds of your voice once. After each call, the speaker that sounds like you gets your name and the other speaker gets the contact name. Everything stays on the phone.</string>
+    <string name="voice_display_name">Display name</string>
+    <string name="voice_profile">Voice profile</string>
+    <string name="voice_enrolled_on">Enrolled %1$s</string>
+    <string name="voice_not_enrolled">Not enrolled</string>
+    <string name="voice_record">Record my voice (30s)</string>
+    <string name="voice_threshold">Match threshold: %1$s</string>
+    <string name="voice_delete">Delete voice profile</string>
 </resources>
