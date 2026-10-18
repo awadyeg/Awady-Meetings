@@ -2,6 +2,7 @@ package com.riffado.meetings.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,7 +99,7 @@ fun PersonScreen(
                                     Modifier.clip(CircleShape).glass(CircleShape, elevation = 2.dp)
                                         .clickable(role = Role.Button, onClickLabel = stringResource(R.string.person_call)) {
                                             haptics.tap()
-                                            runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(phone)))) }
+                                            runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, ("tel:" + Uri.encode(phone)).toUri())) }
                                         }
                                         .padding(horizontal = 14.dp, vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically,

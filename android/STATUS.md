@@ -99,7 +99,9 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | Detail ⋯ menu: "Extract tasks (n)" re-runs extraction for that recording | done |
 | Version bump: `versionCode 2`, `versionName "2.1.0-phase2"` (debug `versionNameSuffix "-v2"` removed so the installed name is exactly `2.1.0-phase2`; applicationId suffix `.v2` unchanged) | done |
 
-### Phase 3 — Comments, export, person page (in progress)
+### Phase 3 — Comments, export, person page (done, awaiting device test)
+Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green (99 unit tests, lint 0 errors / 36 warnings, same kinds as before). aapt2 shows `com.riffado.meetings.v2`, versionCode 3, versionName `2.2.0-phase3`, label "Awady meetings v2", and FileProvider `com.riffado.meetings.v2.exports`. Signed with the committed debug keystore (SHA-256 `f4874dbb…4812`). APK: `/workspace/riffado-apk/riffado-v2-phase3.apk`. Screenshots: `docs/screenshots/comments_*.png`, `comment_editor_light.png`, `export_sheet_*.png`, `export_pdf_page1.png`, `person_*.png`.
+
 | Item | Status |
 |---|---|
 | `data/Comments.kt` — `LineComment` (line index + quote + speaker + timestamp), stored in `Recording.comments` (recordings.json, backward compatible); `Comments.lines` (the exact lines the transcript view shows), `upsert` (add / edit / blank = delete, one note per line), `anchor` (re-anchors by quote after re-transcription, else "orphan"); `CommentsTest` (6 tests incl. RecordingStore round-trip via Robolectric and Ask AI context) | done |
@@ -116,7 +118,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
 2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _Done, awaiting device test._
-3. **Phase 3** — comments on transcript lines, export & share (PDF / Markdown / WhatsApp / Notion), person page. _In progress._
+3. **Phase 3** — comments on transcript lines, export & share (PDF / Markdown / WhatsApp / Notion), person page. _Done, awaiting device test._
 4. MCP server — expose recordings/transcripts/tasks to external agents.
 (Bookmarks during recording shipped in Phase 1.)
 
@@ -144,11 +146,20 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 - Some strings in My voice progress messages are still English-only literals.
 
 ## Next steps
-1. Install `riffado-v2-phase2.apk` (versionCode 2, installs over Phase 1) on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
-2. Device test Phase 2: Ask AI with Groq (e.g. `openai/gpt-oss-120b`), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
-3. Fix device findings (bump `versionCode` for each release), then Phase 3 (bookmarks + comments).
+1. Install `riffado-v2-phase3.apk` (versionCode 3, installs over Phase 2). Data is kept: comments and the Notion settings are new optional fields.
+2. Device test Phase 3:
+   - Long-press a transcript line, then add, edit and delete a note, including on an Arabic line.
+   - Ask AI uses the notes.
+   - Export a PDF and open it in Drive or Files. Check the Arabic shaping and alignment.
+   - Share the Markdown file to Gmail or Drive.
+   - WhatsApp share, with and without WhatsApp installed.
+   - Notion: create an integration, share the parent page with it, paste the token and page URL in Settings, then Send to Notion with a long call.
+   - Person page from each entry point (people strip long-press, "View …" row, call-card avatar, detail contact line). Dial, open a task or recording and come back, and Ask AI about the person.
+3. Still open from Phase 2: Ask AI / task extraction against a live provider, and calendar insert.
+4. Fix device findings (bump `versionCode` for each release), then the MCP server phase.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 3 verified (99 tests, lint clean), lint KTX fixes in new code, APK `riffado-v2-phase3.apk`.
 - 2026-10-18: Phase 3 item 4 — versionCode 3 / versionName 2.2.0-phase3.
 - 2026-10-18: Phase 3 item 3 — person page (stats, tasks, recordings, Ask AI scoped to the person), entry points from Home and Detail, screenshots `person_*`.
 - 2026-10-18: Phase 3 item 2 — export & share: PDF, Markdown, WhatsApp, Send to Notion (+ Settings), tests, screenshots `export_*`.

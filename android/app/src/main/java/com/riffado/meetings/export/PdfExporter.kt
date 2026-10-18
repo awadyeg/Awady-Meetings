@@ -1,5 +1,6 @@
 package com.riffado.meetings.export
 
+import androidx.core.graphics.withClip
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -79,11 +80,10 @@ object PdfExporter {
                 val top = layout.getLineTop(i).toFloat()
                 val h = layout.getLineBottom(i) - top
                 if (!open || y + h > PAGE_H - MARGIN) newPage()
-                canvas.save()
-                canvas.clipRect(MARGIN + indent - 6f, y, MARGIN + indent + width + 2f, y + h)
-                canvas.translate(MARGIN + indent, y - top)
-                layout.draw(canvas)
-                canvas.restore()
+                canvas.withClip(MARGIN + indent - 6f, y, MARGIN + indent + width + 2f, y + h) {
+                    translate(MARGIN + indent, y - top)
+                    layout.draw(this)
+                }
                 if (bar) canvas.drawRect(MARGIN + indent - 8f, y, MARGIN + indent - 6f, y + h, barPaint)
                 y += h
             }

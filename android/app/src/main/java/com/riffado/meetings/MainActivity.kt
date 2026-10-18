@@ -1,5 +1,6 @@
 package com.riffado.meetings
 
+import androidx.core.net.toUri
 import com.riffado.meetings.ui.PersonScreen
 import com.riffado.meetings.ui.PersonLogic
 import androidx.compose.runtime.mutableStateMapOf
@@ -179,7 +180,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                 if (notice.url != null) {
                     androidx.compose.material3.TextButton(onClick = {
                         exportNotice = null
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(notice.url))) }
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, notice.url.toUri())) }
                     }) { Text(stringResource(R.string.notion_open)) }
                 } else {
                     androidx.compose.material3.TextButton(onClick = { exportNotice = null }) { Text(stringResource(R.string.action_ok)) }
