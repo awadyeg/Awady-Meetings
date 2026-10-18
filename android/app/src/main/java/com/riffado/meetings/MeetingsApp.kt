@@ -28,6 +28,7 @@ class MeetingsApp : Application() {
     val tasks by lazy { com.riffado.meetings.data.TaskStore(this) }
     val voiceProfiles by lazy { VoiceProfileStore(this) }
     val speakerModel by lazy { SpeakerModelManager(this) }
+    val mcpSettings by lazy { com.riffado.meetings.mcp.McpSettingsStore(this) }
 
     val appScope = CoroutineScope(SupervisorJob())
 
@@ -61,9 +62,13 @@ class MeetingsApp : Application() {
                 NotificationManager.IMPORTANCE_DEFAULT,
             ),
         )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_MCP, getString(R.string.channel_mcp), NotificationManager.IMPORTANCE_LOW),
+        )
     }
 
     companion object {
+        const val CHANNEL_MCP = "mcp"
         const val CHANNEL_RECORDING = "recording"
         const val CHANNEL_PROCESSING = "processing"
 

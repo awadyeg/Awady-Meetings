@@ -330,4 +330,9 @@
     <string name="unit_hour_short">س</string>
     <string name="unit_minute_short">د</string>
     <string name="unit_second_short">ث</string>
+    <string name="channel_mcp">اتصالات وكلاء الذكاء الاصطناعي</string>
+    <string name="mcp_notif_title">يمكن لوكلاء الذكاء الاصطناعي الاتصال (MCP)</string>
+    <string name="mcp_notif_no_network">يعمل على المنفذ %1$d. لا يوجد عنوان Wi-Fi</string>
+    <string name="mcp_notif_stop">إيقاف</string>
+    <string name="mcp_err_port_in_use">المنفذ %1$d مستخدم بالفعل. اختر منفذًا آخر.</string>
 </resources>

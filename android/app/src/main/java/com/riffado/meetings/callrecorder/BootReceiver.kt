@@ -10,6 +10,10 @@ import android.util.Log
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Restart the MCP server if the user left it on (both broadcasts may start foreground services).
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            com.riffado.meetings.mcp.McpService.sync(context)
+        }
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
                 Log.d(TAG, "Device booted, call recording will be active when accessibility service starts")

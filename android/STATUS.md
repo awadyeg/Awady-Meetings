@@ -33,6 +33,7 @@ CI (GitHub Actions) uploads the artifact `riffado-meetings-debug`; download via
 | Recording | `recording/RecordingService` (mic FGS, segmenting, pause/resume, live level → `RecorderState`), `QuickRecordActivity`, `RecordingTileService` (QS tile) |
 | Call recorder | `callrecorder/` — AccessibilityService + PHONE_STATE receiver + mic FGS, `CallParticipantResolver` (contacts/call log), diagnostics log |
 | AI | `ai/` — `TranscriptionCoordinator` (ordered fallback, quota detection, reset day, `ProviderRecoveryWorker`), clients for ElevenLabs / Munsit / Gemini / Sarvam / OpenAI-compatible, `ProcessingWorker` (WorkManager), `TranscriptChunker` (chunked summaries), speaker ID (`SpeakerIdentifier`, `SpeakerNaming`, sherpa-onnx model bundled as asset) |
+| MCP | `mcp/` — `McpProtocol` (JSON-RPC 2.0, dual-era MCP: legacy `initialize` handshake + modern 2026-07-28 per-request `_meta`), `McpHttpServer` (hand-rolled HTTP/1.1 on `ServerSocket`, Streamable HTTP POST `/mcp`, bearer auth, Origin check), `McpTools` (read-only tools), `McpService` (specialUse FGS), `McpSettingsStore` (enabled / port / encrypted token / keep-awake), `McpRuntime` (status flow), `McpNetwork` (LAN / Tailscale IPs), `McpToken` |
 | UI | `ui/` — Compose. `Theme.kt` (Apple palette + type), `Glass.kt` (Liquid Glass primitives on Haze), screens (Home, Detail, Recorder, Settings, Provider management, Tasks) |
 
 UI design system (Phase 1): Apple HIG-like colours (`AppleColors`, `Apple.colors`), iOS type scale (`AppleType`),
@@ -62,6 +63,9 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 3 Comments on transcript lines** | done — unit + persistence tests; NOT device-tested |
 | **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | done — unit tests for Markdown / share text / Notion payloads, PDF layout rendered in tests; NOT tested against the live Notion API or on a device |
 | **Phase 3 Person page** | done — `PersonLogicTest`, screenshots; NOT device-tested |
+| **Phase 4 MCP server (Streamable HTTP, bearer auth, FGS)** | done — protocol + real-socket tests on localhost; NOT device-tested, not yet tried with a real agent client |
+| **Phase 4 MCP read-only tools** | todo |
+| **Phase 4 Settings "Connect AI agents (MCP)"** | todo |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -115,11 +119,19 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | Settings → Notion group: integration token (encrypted like API keys) + parent page URL/ID with validation hint | done |
 | Detail: share button and ⋯ → "Export & share" open a glass sheet (PDF, Markdown / text, WhatsApp, Send to Notion with spinner; Notion row points to Settings when not configured). Files go to `cache/exports` (pruned after a day) and are shared through a `FileProvider` (`${applicationId}.exports`). WhatsApp: `ACTION_SEND` to `com.whatsapp`, then `com.whatsapp.w4b`, else the system chooser. Notion success/failure dialog with "Open in Notion" | done |
 
+### Phase 4 — MCP server for AI agents (in progress)
+| Item | Status |
+|---|---|
+| `mcp/McpProtocol.kt` — JSON-RPC 2.0 dispatch. Legacy era (2024-11-05 … 2025-11-25): `initialize` (echoes a supported `protocolVersion`, else offers 2025-11-25), `notifications/*` → 202, `ping`, `tools/list`, `tools/call`; legacy batches answered. Modern era (2026-07-28): no handshake needed, `server/discover`, `resultType: "complete"` on every result, `MCP-Protocol-Version` ↔ `_meta` check, `Mcp-Method` / `Mcp-Name` validation (incl. `=?base64?…?=`) → 400 / -32020, unknown version → 400 / -32022 with `supported`, unknown method → 404 / -32601 (200 for legacy clients). Stateless: no `Mcp-Session-Id`. `McpProtocolTest` (9 tests) | done |
+| `mcp/McpHttpServer.kt` — `POST /mcp` only (GET/DELETE → 405 `Allow: POST`, other paths 404), JSON replies or a one-event SSE reply when the client accepts only `text/event-stream`, keep-alive, chunked request bodies, 1 MiB body limit (413), 8 worker threads. Binds `0.0.0.0` (LAN / Tailscale). `McpHttpServerTest` starts it on 127.0.0.1 in a plain JVM test and runs initialize → notifications/initialized → tools/list → tools/call over OkHttp (7 tests) | done |
+| Auth: `Authorization: Bearer rfd_…` (256-bit random, `McpToken`, stored encrypted via `KeystoreCipher`). Checked before routing, so a missing or wrong token gets 401 + `WWW-Authenticate: Bearer` on every path. Compared in constant time. Origin header: allowed only for localhost or the same IP the client dialled (DNS names refused → 403). `McpTokenTest` (4 tests) | done |
+| `mcp/McpService.kt` — foreground service (`specialUse`, subtype property in the manifest) started only while enabled; notification shows the URL and has Stop; optional partial wake lock + Wi-Fi low-latency lock ("keep awake", default on) so agents can connect with the screen off; port-in-use shown as an error. Re-synced on app launch and after boot / app update (`BootReceiver`) | done |
+
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
 2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _Done, awaiting device test._
 3. **Phase 3** — comments on transcript lines, export & share (PDF / Markdown / WhatsApp / Notion), person page. _Done, awaiting device test._
-4. MCP server — expose recordings/transcripts/tasks to external agents.
+4. **Phase 4** — embedded MCP server so agent apps (Claude Desktop, Cursor, …) can read recordings, transcripts, tasks and people. _In progress._
 (Bookmarks during recording shipped in Phase 1.)
 
 ## Known issues / notes
@@ -159,6 +171,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 4. Fix device findings (bump `versionCode` for each release), then the MCP server phase.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 4 items 1–2 — embedded MCP server (Streamable HTTP, dual-era JSON-RPC) in a foreground service, bearer-token auth, Origin check, tests incl. a real localhost server.
 - 2026-10-18: Phase 3 verified (99 tests, lint clean), lint KTX fixes in new code, APK `riffado-v2-phase3.apk`.
 - 2026-10-18: Phase 3 item 4 — versionCode 3 / versionName 2.2.0-phase3.
 - 2026-10-18: Phase 3 item 3 — person page (stats, tasks, recordings, Ask AI scoped to the person), entry points from Home and Detail, screenshots `person_*`.

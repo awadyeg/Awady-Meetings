@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // MCP server left enabled: make sure it runs (the app is in the foreground, so this is allowed).
+        com.riffado.meetings.mcp.McpService.sync(this)
         setContent {
             MeetingsTheme { App(viewModel, intent) }
         }
