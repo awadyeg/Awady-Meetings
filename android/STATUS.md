@@ -63,7 +63,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 3 Comments on transcript lines** | done — unit + persistence tests; NOT device-tested |
 | **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | done — unit tests for Markdown / share text / Notion payloads, PDF layout rendered in tests; NOT tested against the live Notion API or on a device |
 | **Phase 3 Person page** | done — `PersonLogicTest`, screenshots; NOT device-tested |
-| **Phase 4 MCP server (Streamable HTTP, bearer auth, FGS)** | done — protocol + real-socket tests on localhost; NOT device-tested, not yet tried with a real agent client |
+| **Phase 4 MCP server (Streamable HTTP, bearer auth, FGS)** | done — protocol + real-socket tests on localhost; interop-checked with the official TypeScript MCP SDK client and `mcp-remote` 0.15.1 against the JVM server; NOT device-tested |
 | **Phase 4 MCP read-only tools** | done — `McpToolsTest` against fake data + over HTTP; `ask` NOT tried against a live LLM through MCP |
 | **Phase 4 Settings "Connect AI agents (MCP)"** | done — screenshots light / dark / ar; NOT device-tested |
 
@@ -119,13 +119,20 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | Settings → Notion group: integration token (encrypted like API keys) + parent page URL/ID with validation hint | done |
 | Detail: share button and ⋯ → "Export & share" open a glass sheet (PDF, Markdown / text, WhatsApp, Send to Notion with spinner; Notion row points to Settings when not configured). Files go to `cache/exports` (pruned after a day) and are shared through a `FileProvider` (`${applicationId}.exports`). WhatsApp: `ACTION_SEND` to `com.whatsapp`, then `com.whatsapp.w4b`, else the system chooser. Notion success/failure dialog with "Open in Notion" | done |
 
-### Phase 4 — MCP server for AI agents (in progress)
+### Phase 4 — MCP server for AI agents (done, awaiting device test)
+Verified 2026-10-18 (~20:25 UTC+4): `./gradlew assembleDebug lintDebug testDebugUnitTest` green (132 unit tests, 1 skipped = the opt-in interop harness; lint 0 errors / 36 warnings, same kinds as before). aapt2 shows `com.riffado.meetings.v2`, versionCode 4, versionName `2.3.0-phase4`, label "Awady meetings v2", permission `FOREGROUND_SERVICE_SPECIAL_USE`, and `McpService` with `foregroundServiceType=specialUse` plus the subtype property. Signed with the committed debug keystore (v2 scheme, SHA-256 `f4874dbb…4812`). APK: `/workspace/riffado-apk/riffado-v2-phase4.apk`. Screenshots: `docs/screenshots/mcp_settings_{light,dark,ar_rtl}.png`.
+
+**Interop check** (real clients against the real server code, fake data): `McpInteropTest` is skipped unless `/tmp/mcp-interop/token` exists. When it exists, it serves the `McpToolsTest` fixture on `127.0.0.1:18765` until `/tmp/mcp-interop/stop` appears. `tools/mcp-interop.mjs` (run from a folder with `npm i @modelcontextprotocol/sdk mcp-remote`) then connects twice:
+- with the SDK's `StreamableHTTPClientTransport` and a bearer header;
+- with `mcp-remote`, using exactly the args/env of the app's "Copy config JSON" snippet.
+Each connection lists tools and calls all six tools, plus `ping` and an unknown id (gives `isError`). A wrong token is refused. Result: both connections pass (SDK 1.32.1 negotiated 2025-11-25). The check found that strict legacy clients reject `resultType` in results (zod "unrecognized key" on `ping`). `resultType` is now only sent to modern-era (2026-07-28) requests.
+
 | Item | Status |
 |---|---|
-| `mcp/McpProtocol.kt` — JSON-RPC 2.0 dispatch. Legacy era (2024-11-05 … 2025-11-25): `initialize` (echoes a supported `protocolVersion`, else offers 2025-11-25), `notifications/*` → 202, `ping`, `tools/list`, `tools/call`; legacy batches answered. Modern era (2026-07-28): no handshake needed, `server/discover`, `resultType: "complete"` on every result, `MCP-Protocol-Version` ↔ `_meta` check, `Mcp-Method` / `Mcp-Name` validation (incl. `=?base64?…?=`) → 400 / -32020, unknown version → 400 / -32022 with `supported`, unknown method → 404 / -32601 (200 for legacy clients). Stateless: no `Mcp-Session-Id`. `McpProtocolTest` (9 tests) | done |
+| `mcp/McpProtocol.kt` — JSON-RPC 2.0 dispatch. Legacy era (2024-11-05 … 2025-11-25): `initialize` (echoes a supported `protocolVersion`, else offers 2025-11-25), `notifications/*` → 202, `ping`, `tools/list`, `tools/call`; legacy batches answered. Modern era (2026-07-28): no handshake needed, `server/discover`, `resultType: "complete"` on every modern result (omitted for legacy requests: strict clients reject unknown keys), `MCP-Protocol-Version` ↔ `_meta` check, `Mcp-Method` / `Mcp-Name` validation (incl. `=?base64?…?=`) → 400 / -32020, unknown version → 400 / -32022 with `supported`, unknown method → 404 / -32601 (200 for legacy clients). Stateless: no `Mcp-Session-Id`. `McpProtocolTest` (9 tests) | done |
 | `mcp/McpHttpServer.kt` — `POST /mcp` only (GET/DELETE → 405 `Allow: POST`, other paths 404), JSON replies or a one-event SSE reply when the client accepts only `text/event-stream`, keep-alive, chunked request bodies, 1 MiB body limit (413), 8 worker threads. Binds `0.0.0.0` (LAN / Tailscale). `McpHttpServerTest` starts it on 127.0.0.1 in a plain JVM test and runs initialize → notifications/initialized → tools/list → tools/call over OkHttp (7 tests) | done |
 | Auth: `Authorization: Bearer rfd_…` (256-bit random, `McpToken`, stored encrypted via `KeystoreCipher`). Checked before routing, so a missing or wrong token gets 401 + `WWW-Authenticate: Bearer` on every path. Compared in constant time. Origin header: allowed only for localhost or the same IP the client dialled (DNS names refused → 403). `McpTokenTest` (4 tests) | done |
-| `mcp/McpService.kt` — foreground service (`specialUse`, subtype property in the manifest) started only while enabled; notification shows the URL and has Stop; optional partial wake lock + Wi-Fi low-latency lock ("keep awake", default on) so agents can connect with the screen off; port-in-use shown as an error. Re-synced on app launch and after boot / app update (`BootReceiver`) | done |
+| `mcp/McpService.kt` — foreground service (`specialUse`, subtype property in the manifest) started only while enabled; notification shows the URL and has Stop; optional partial wake lock (6 h timeout, renewed on every request) + Wi-Fi low-latency lock ("keep awake", default on) so agents can connect with the screen off; port-in-use shown as an error; port / keep-awake changes restart it in place (`ACTION_RESTART`). Re-synced on app launch and after boot / app update (`BootReceiver`) | done |
 | `mcp/McpTools.kt` — six read-only tools (annotated `readOnlyHint`; JSON Schema inputs; results = `structuredContent` object + the same JSON as a text block; user-facing failures → `isError: true`, bad arguments → -32602). Times are ISO 8601 with the phone's offset; date-only filters cover the whole local day. **list_recordings**: type / person / from / to / limit / offset, newest first, with people, status, summary preview, task / note / bookmark counts. **search_recordings**: all words must match across title, people, summary, transcript and notes (Arabic-normalised), ranked, with up to 3 snippets. **get_recording**: summary, transcript lines (speaker names, timestamps; `max_transcript_chars`, `transcript_truncated`), tasks, bookmarks, notes (re-anchored, orphans flagged). **list_tasks**: status / due range / person / recording, due-date order, overdue flag. **get_person**: exact or unique partial name (else the known people are listed), phone, calls / meetings, total time, open tasks, recordings. **ask**: the in-app Ask AI pipeline, now shared as `ai/AskAiEngine` (also used by the chat), scoped by person or recording, returns the answer + cited sources; 3-minute timeout. `McpToolsTest` (10 tests incl. end-to-end over HTTP) | done |
 | Settings → **Connect AI agents (MCP)** (`ui/McpSettings.kt`, applies immediately, not via Save): toggle with live status ("Running on port 8765" / starting / error, e.g. port in use); glass status card with request count and every reachable URL (Wi-Fi, Tailscale `100.64/10`, other; refreshed every 5 s; tap to copy); port field with Apply (1024–65535, restarts the server); "stay reachable with the screen off" (wake + Wi-Fi lock); token row (masked / show, copy marked sensitive on the clipboard, regenerate with a confirmation); client config (`mcp/McpClientConfig.kt`): **mcp-remote** for Claude Desktop (`npx -y mcp-remote <url> --allow-http --transport http-only --header Authorization:${RIFFADO_AUTH}` + env `RIFFADO_AUTH=Bearer …`, no spaces in args) or **HTTP URL** for Cursor / Claude Code (`type: http`, `url`, `headers.Authorization`); preview masks the token, "Copy config JSON" copies the real one. The JSON block is always LTR. All strings in Arabic (plurals for the request count, the bearer header in LTR isolates). `McpClientConfigTest` (2 tests); screenshots `docs/screenshots/mcp_settings_{light,dark,ar_rtl}.png` | done |
 | Version bump: `versionCode 4`, `versionName "2.3.0-phase4"` (applicationId `com.riffado.meetings.v2`, keystore and CI artifact unchanged) | done |
@@ -134,10 +141,14 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
 2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _Done, awaiting device test._
 3. **Phase 3** — comments on transcript lines, export & share (PDF / Markdown / WhatsApp / Notion), person page. _Done, awaiting device test._
-4. **Phase 4** — embedded MCP server so agent apps (Claude Desktop, Cursor, …) can read recordings, transcripts, tasks and people. _In progress._
+4. **Phase 4** — embedded MCP server so agent apps (Claude Desktop, Cursor, …) can read recordings, transcripts, tasks and people. _Done, awaiting device test._
 (Bookmarks during recording shipped in Phase 1.)
 
 ## Known issues / notes
+- MCP: plain HTTP (no TLS). The bearer token travels in cleartext on the LAN, so use it on a trusted Wi-Fi or over Tailscale (WireGuard-encrypted). One token gives read access to everything (no scopes); regenerate it to revoke all clients.
+- MCP: mobile-data IPs are usually behind carrier NAT and unreachable. The URL list shows Wi-Fi / Tailscale / other interfaces. Android may still throttle the app in Doze despite the foreground service and wake lock; the wake lock lapses after 6 h with no requests (the server keeps running). Samsung "sleeping apps" may need the app excluded.
+- MCP `ask` uses the configured summary provider (same privacy surface as Ask AI) and blocks up to 3 minutes; it was tested only with a fake engine, not a live LLM over MCP.
+- MCP is stateless: no sessions, no server→client streams (GET → 405), no resources/prompts, only tools. Screenshots render the MCP section alone, not inside the full Settings screen.
 - Person matching is by name only. A task assigned to "Sara" doesn't show on "Sara Ali"'s page unless it comes from one of her recordings. Two contacts with the same name are merged.
 - Notion export is untested against the real API (no token here). Very long transcripts become many blocks (one per line) and several append requests. If an append fails the page exists but is incomplete; the dialog then offers to open it.
 - PDF uses the system sans-serif font; Arabic rendering depends on the device's Arabic font (Samsung/Google ship Noto). The PDF layout was checked via Robolectric bitmap rendering, not a real `PdfDocument`.
@@ -161,8 +172,13 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 - Some strings in My voice progress messages are still English-only literals.
 
 ## Next steps
-1. Install `riffado-v2-phase3.apk` (versionCode 3, installs over Phase 2). Data is kept: comments and the Notion settings are new optional fields.
-2. Device test Phase 3:
+1. Install `riffado-v2-phase4.apk` (versionCode 4, installs over Phase 3; data kept, MCP is off by default).
+2. Device test Phase 4 (MCP):
+   - Settings → Connect AI agents → toggle on. Check the notification (URL + Stop), the status card and the Wi-Fi / Tailscale URLs. Stop from the notification turns the toggle off.
+   - Claude Desktop: paste the **mcp-remote** snippet into `claude_desktop_config.json` (needs Node). Cursor / Claude Code: use the **HTTP URL** snippet. Ask the agent to list recent calls, search, open a recording, list open tasks, look up a person, and ask a question.
+   - With the token removed or wrong, the client must fail (401). After Regenerate, old configs must stop working.
+   - Over Tailscale from another network; with the screen off for 10+ minutes; after reboot (server comes back if enabled); change the port.
+3. Device test Phase 3:
    - Long-press a transcript line, then add, edit and delete a note, including on an Arabic line.
    - Ask AI uses the notes.
    - Export a PDF and open it in Drive or Files. Check the Arabic shaping and alignment.
@@ -170,10 +186,11 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
    - WhatsApp share, with and without WhatsApp installed.
    - Notion: create an integration, share the parent page with it, paste the token and page URL in Settings, then Send to Notion with a long call.
    - Person page from each entry point (people strip long-press, "View …" row, call-card avatar, detail contact line). Dial, open a task or recording and come back, and Ask AI about the person.
-3. Still open from Phase 2: Ask AI / task extraction against a live provider, and calendar insert.
-4. Fix device findings (bump `versionCode` for each release), then the MCP server phase.
+4. Still open from Phase 2: Ask AI / task extraction against a live provider, and calendar insert.
+5. Fix device findings (bump `versionCode` for each release).
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 4 verification. Interop check with the official MCP SDK client + mcp-remote (`McpInteropTest`, `tools/mcp-interop.mjs`). `resultType` is sent to modern-era requests only. Wake lock gets a timeout renewed per request. In-place restart on port / keep-awake change. STATUS done, awaiting device test.
 - 2026-10-18: Phase 4 item 5 — versionCode 4 / versionName 2.3.0-phase4.
 - 2026-10-18: Phase 4 item 4 — Settings "Connect AI agents (MCP)" (toggle, status, URLs, port, keep-awake, token copy / regenerate, client config snippets), Arabic strings, screenshots.
 - 2026-10-18: Phase 4 item 3 — MCP read-only tools (list/search/get recordings, tasks, person, ask) and `AskAiEngine` shared with the chat.

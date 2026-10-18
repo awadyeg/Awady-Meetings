@@ -61,12 +61,13 @@ class McpProtocolTest {
     }
 
     @Test fun pingToolsListAndCall() {
-        assertEquals(JsonObject(mapOf("resultType" to JsonPrimitive("complete"))), obj(post("""{"jsonrpc":"2.0","id":2,"method":"ping"}"""))["result"])
+        // Legacy requests get plain results (strict clients reject unknown keys such as resultType).
+        assertEquals(JsonObject(emptyMap()), obj(post("""{"jsonrpc":"2.0","id":2,"method":"ping"}"""))["result"])
         val tools = obj(post("""{"jsonrpc":"2.0","id":3,"method":"tools/list"}"""))["result"]!!.jsonObject["tools"]!!.jsonArray
         assertEquals("echo", tools[0].jsonObject["name"]!!.jsonPrimitive.content)
         val call = obj(post("""{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"echo","arguments":{"text":"مرحبا"}}}"""))["result"]!!.jsonObject
         assertEquals("مرحبا", call["content"]!!.jsonArray[0].jsonObject["text"]!!.jsonPrimitive.content)
-        assertEquals("complete", call["resultType"]!!.jsonPrimitive.content)
+        assertNull(call["resultType"])
     }
 
     @Test fun errors() {
@@ -104,6 +105,7 @@ class McpProtocolTest {
         val c = post("""{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hi"},$meta}}""", modernHeaders("tools/call", "echo"))
         assertEquals(200, c.status)
         assertFalse(obj(c)["result"]!!.jsonObject["isError"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals("complete", obj(c)["result"]!!.jsonObject["resultType"]!!.jsonPrimitive.content) // modern requests do get it
     }
 
     @Test fun modernHeaderValidation() {

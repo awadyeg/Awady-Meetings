@@ -117,7 +117,9 @@ class McpProtocol(
             Reply(200, buildJsonObject {
                 put("jsonrpc", "2.0")
                 put("id", id)
-                put("result", JsonObject(result + ("resultType" to JsonPrimitive("complete"))))
+                // `resultType` is required from 2026-07-28 on, but strict legacy clients (e.g. the TypeScript
+                // SDK's EmptyResult schema for ping) reject unknown keys, so only modern requests get it.
+                put("result", if (modern || method == "server/discover") JsonObject(result + ("resultType" to JsonPrimitive("complete"))) else result)
             })
         } catch (e: McpInvalidParams) {
             Reply(200, error(id, INVALID_PARAMS, e.message ?: "Invalid params"))

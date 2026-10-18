@@ -48,7 +48,7 @@ class McpService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0,
         )
         val running = server
-        if (running != null && running.isRunning && running.boundPort == settings.port) {
+        if (intent?.action != ACTION_RESTART && running != null && running.isRunning && running.boundPort == settings.port) {
             McpRuntime.set(McpServerState.Running(running.boundPort, System.currentTimeMillis(), running.requestCount))
             return START_STICKY
         }
@@ -58,7 +58,10 @@ class McpService : Service() {
             protocol = McpProtocol(McpTools.forApp(app), serverVersion = version),
             token = { app.mcpSettings.settings.value.token },
             port = settings.port,
-            onRequest = { _, _ -> McpRuntime.recordRequest() },
+            onRequest = { _, _ ->
+                McpRuntime.recordRequest()
+                refreshWakeLock()
+            },
         )
         try {
             fresh.start()
@@ -100,7 +103,7 @@ class McpService : Service() {
         if (!keepAwake) return
         wakeLock = getSystemService<PowerManager>()?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "riffado:mcp")?.apply {
             setReferenceCounted(false)
-            acquire()
+            acquire(WAKE_LOCK_IDLE_MS)
         }
         @Suppress("DEPRECATION")
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL_HIGH_PERF
@@ -108,6 +111,11 @@ class McpService : Service() {
             setReferenceCounted(false)
             acquire()
         }
+    }
+
+    /** Each request extends the wake lock; after [WAKE_LOCK_IDLE_MS] without requests the phone may sleep again. */
+    private fun refreshWakeLock() {
+        runCatching { wakeLock?.acquire(WAKE_LOCK_IDLE_MS) }
     }
 
     private fun releaseLocks() {
@@ -138,6 +146,8 @@ class McpService : Service() {
         private const val TAG = "McpService"
         private const val NOTIFICATION_ID = 4711
         private const val ACTION_STOP = "com.riffado.meetings.mcp.STOP"
+        private const val ACTION_RESTART = "com.riffado.meetings.mcp.RESTART"
+        private const val WAKE_LOCK_IDLE_MS = 6 * 60 * 60 * 1000L
 
         /** Starts or stops the service to match the saved settings (call after any MCP setting changes). */
         fun sync(context: Context) {
@@ -154,8 +164,10 @@ class McpService : Service() {
 
         /** Restarts a running server (port or wake-lock preference changed). */
         fun restart(context: Context) {
-            context.stopService(Intent(context, McpService::class.java))
-            sync(context)
+            val app = context.applicationContext as MeetingsApp
+            if (!app.mcpSettings.settings.value.enabled) return sync(context)
+            runCatching { ContextCompat.startForegroundService(context, Intent(context, McpService::class.java).setAction(ACTION_RESTART)) }
+                .onFailure { McpRuntime.set(McpServerState.Failed(it.message ?: it.javaClass.simpleName)) }
         }
     }
 }

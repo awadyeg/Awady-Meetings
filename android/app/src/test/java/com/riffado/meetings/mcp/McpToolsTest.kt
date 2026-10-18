@@ -78,7 +78,7 @@ class McpToolsTest {
             return AskResult("They agreed to ship next sprint [1].", listOf(AskAi.Source(1, "m1", "Weekly product sync", meeting.createdAt)), 3)
         }
     }
-    private val tools = McpTools(data)
+    internal val tools = McpTools(data)
 
     private fun call(name: String, args: JsonObject = JsonObject(emptyMap())): JsonObject {
         val r = tools.call(name, args)
