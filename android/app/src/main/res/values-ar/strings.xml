@@ -168,4 +168,11 @@
     <string name="home_empty_title">لا توجد تسجيلات بعد</string>
     <string name="tasks_preview_note">المهام المفتوحة من ملخصات اجتماعاتك. تحديد المهام كمنجزة ومزامنة التقويم قريبًا.</string>
     <string name="tasks_empty">لا توجد مهام بعد. ستظهر هنا بعد تلخيص أي تسجيل.</string>
+    <string name="action_more">المزيد</string>
+    <string name="speakers_redetect">إعادة التعرف على المتحدثين</string>
+    <string name="speakers_identifying">جارٍ التعرف على المتحدثين…</string>
+    <string name="detail_bookmarks">العلامات</string>
+    <string name="detail_transcribed_by">فرّغه %1$s</string>
+    <string name="player_back10">رجوع 10 ثوانٍ</string>
+    <string name="player_forward10">تقديم 10 ثوانٍ</string>
 </resources>

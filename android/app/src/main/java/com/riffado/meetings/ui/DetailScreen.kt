@@ -1,78 +1,86 @@
 package com.riffado.meetings.ui
 
 import android.content.Intent
-import android.net.Uri
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import com.riffado.meetings.data.Speakers
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import com.riffado.meetings.R
 import com.riffado.meetings.data.Recording
 import com.riffado.meetings.data.RecordingStatus
-import kotlinx.coroutines.delay
+import com.riffado.meetings.data.Speakers
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DetailScreen(
     recording: Recording,
@@ -87,114 +95,153 @@ fun DetailScreen(
     detectingSpeakers: Boolean = false,
 ) {
     val context = LocalContext.current
-    var tab by rememberSaveable { mutableIntStateOf(if (recording.summary != null) 0 else 1) }
+    val c = Apple.colors
+    var tab by rememberSaveable(recording.id) { mutableIntStateOf(if (recording.summary != null) 0 else 1) }
     var confirmDelete by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     var editingSpeaker by remember { mutableStateOf<String?>(null) }
     val speakerIds = remember(recording.transcript) { Speakers.ids(recording.transcript) }
 
-    Scaffold(
-        topBar = {
-            val titleDirection = TextDirectionDetector.detectDirection(recording.title)
-            TopAppBar(
-                title = { 
-                    Text(
-                        recording.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            textDirection = titleDirection,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
-                        ),
+    val player = if (segmentPaths.isNotEmpty()) rememberPlayerController(segmentPaths) else null
+    var waveform by remember(recording.id) { mutableStateOf<Waveform?>(null) }
+    LaunchedEffect(recording.id, segmentPaths) {
+        if (segmentPaths.isNotEmpty()) {
+            waveform = WaveformExtractor.load(context, recording.id, segmentPaths.map(::File))
+            waveform?.let { wf -> player?.hintSegmentMs = wf.segmentWindows.map { it * Waveform.WINDOW_MS } }
+        }
+    }
+
+    val scroll = rememberScrollState()
+    val collapsePx = with(LocalDensity.current) { 48.dp.toPx() }
+    val haze = rememberHazeState()
+    val topPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TopBarHeight
+    val share = {
+        val text = listOfNotNull(
+            recording.summary,
+            recording.transcript?.let { Speakers.applyNames(it, recording.speakerNames) },
+        ).joinToString("\n\n---\n\n")
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, recording.title)
+            .putExtra(Intent.EXTRA_TEXT, text)
+        context.startActivity(Intent.createChooser(send, recording.title))
+    }
+
+    CompositionLocalProvider(LocalHazeState provides haze) {
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().hazeSource(haze)) {
+                AmbientBackdrop(accent = if (recording.isCall) c.green else c.tint)
+                Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(top = topPad, bottom = if (player != null) 210.dp else 48.dp)) {
+                    LargeTitle(recording.title)
+                    MetaLine(recording)
+                    Spacer(Modifier.height(14.dp))
+
+                    if (recording.status.isBusy) {
+                        Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = c.orange)
+                            Spacer(Modifier.width(8.dp))
+                            Text(statusLabel(recording.status) + "…", style = AppleType.subheadline, color = c.orange)
+                        }
+                    }
+                    recording.error?.let {
+                        Text(
+                            it, style = AppleType.footnote.auto(it), color = c.red,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp)).background(c.red.copy(alpha = 0.1f)).padding(12.dp),
+                        )
+                    }
+                    ProcessButtons(recording, canProcess, onProcess)
+
+                    if (speakerIds.isNotEmpty()) {
+                        SectionLabel(stringResource(R.string.speakers_title))
+                        FlowRow(
+                            Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            speakerIds.forEach { id -> SpeakerChip(id, recording.speakerNames, onClick = { editingSpeaker = id }) }
+                            CapsuleButton(
+                                stringResource(if (detectingSpeakers) R.string.speakers_identifying else R.string.speakers_redetect),
+                                onRedetectSpeakers,
+                                icon = Icons.Filled.PersonSearch,
+                                enabled = !recording.status.isBusy && !detectingSpeakers,
+                            )
+                        }
+                    }
+
+                    if (recording.bookmarks.isNotEmpty() && player != null) {
+                        SectionLabel(stringResource(R.string.detail_bookmarks))
+                        FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            recording.bookmarks.forEach { at ->
+                                CapsuleButton(formatDuration(at), { player.seekGlobal(at); player.play() }, icon = Icons.Filled.Bookmark, color = c.orange)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    SegmentedControl(
+                        listOf(stringResource(R.string.tab_summary), stringResource(R.string.tab_transcript)),
+                        tab, { tab = it },
+                        Modifier.padding(horizontal = 16.dp),
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { renaming = true }) {
-                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.action_rename))
-                    }
-                    IconButton(
-                        enabled = recording.summary != null || recording.transcript != null,
-                        onClick = {
-                            val text = listOfNotNull(
-                                recording.summary,
-                                recording.transcript?.let { Speakers.applyNames(it, recording.speakerNames) },
-                            ).joinToString("\n\n---\n\n")
-                            val send = Intent(Intent.ACTION_SEND)
-                                .setType("text/plain")
-                                .putExtra(Intent.EXTRA_SUBJECT, recording.title)
-                                .putExtra(Intent.EXTRA_TEXT, text)
-                            context.startActivity(Intent.createChooser(send, recording.title))
-                        },
+                    Spacer(Modifier.height(14.dp))
+                    Column(
+                        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(InsetShape).background(c.cell).padding(16.dp),
                     ) {
-                        Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.action_share))
+                        if (tab == 0) {
+                            val summary = recording.summary
+                            if (summary.isNullOrBlank()) EmptyNote(stringResource(R.string.summary_empty), Icons.Filled.AutoAwesome)
+                            else SimpleMarkdown(summary)
+                        } else {
+                            if (recording.transcript.isNullOrBlank()) EmptyNote(stringResource(R.string.transcript_empty), Icons.Filled.GraphicEq)
+                            else TranscriptView(recording, player, waveform)
+                        }
                     }
-                    IconButton(onClick = { confirmDelete = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete))
+                }
+            }
+
+            GlassTopBar(
+                title = recording.title,
+                collapsed = (scroll.value / collapsePx).coerceIn(0f, 1f),
+                leading = {
+                    GlassIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back), onBack, size = 40.dp, iconSize = 20.dp)
+                },
+                trailing = {
+                    GlassIconButton(
+                        Icons.Filled.Share, stringResource(R.string.action_share), share, size = 40.dp, iconSize = 20.dp,
+                        enabled = recording.summary != null || recording.transcript != null,
+                    )
+                    Box {
+                        GlassIconButton(Icons.Filled.MoreHoriz, stringResource(R.string.action_more), { menu = true }, size = 40.dp, iconSize = 22.dp)
+                        DropdownMenu(menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(18.dp), containerColor = c.cell) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_rename)) },
+                                leadingIcon = { Icon(Icons.Filled.Edit, null) },
+                                onClick = { menu = false; renaming = true },
+                            )
+                            if (speakerIds.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.speakers_redetect)) },
+                                    leadingIcon = { Icon(Icons.Filled.PersonSearch, null) },
+                                    enabled = !recording.status.isBusy && !detectingSpeakers,
+                                    onClick = { menu = false; onRedetectSpeakers() },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_delete), color = c.red) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = c.red) },
+                                onClick = { menu = false; confirmDelete = true },
+                            )
+                        }
                     }
                 },
             )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                "${formatDate(recording.createdAt)} · ${formatDuration(recording.durationMs)} · ${statusLabel(recording.status)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            
-            // Show which provider transcribed this recording
-            if (recording.transcribedBy != null) {
-                Text(
-                    "Transcribed by ${providerDisplayName(recording.transcribedBy)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
+
+            if (player != null) {
+                PlayerBar(
+                    player, waveform, recording.bookmarks,
+                    Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 12.dp, vertical = 10.dp),
                 )
-            }
-            
-            if (segmentPaths.isNotEmpty()) AudioPlayer(segmentPaths)
-
-            if (recording.status.isBusy) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            recording.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-            ProcessButtons(recording, canProcess, onProcess)
-            if (speakerIds.isNotEmpty()) {
-                SpeakerChips(speakerIds, recording.speakerNames) { editingSpeaker = it }
-                TextButton(onClick = onRedetectSpeakers, enabled = !recording.status.isBusy && !detectingSpeakers) {
-                    Text(if (detectingSpeakers) "Identifying speakers…" else "Re-detect speakers")
-                }
-            }
-
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_summary)) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_transcript)) })
-            }
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-                if (tab == 0) {
-                    val summary = recording.summary
-                    if (summary.isNullOrBlank()) {
-                        Text(stringResource(R.string.summary_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        SimpleMarkdown(summary)
-                    }
-                } else {
-                    val transcript = recording.transcript
-                    if (transcript.isNullOrBlank()) {
-                        Text(stringResource(R.string.transcript_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        TranscriptView(transcript, recording.speakerNames)
-                    }
-                }
             }
         }
     }
@@ -205,14 +252,10 @@ fun DetailScreen(
             title = { Text(stringResource(R.string.delete_confirm_title)) },
             text = { Text(stringResource(R.string.delete_confirm_body)) },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    onDelete()
-                }) { Text(stringResource(R.string.action_delete)) }
+                TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.action_delete), color = c.red) }
             },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) }
-            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
+            shape = RoundedCornerShape(28.dp),
         )
     }
 
@@ -223,28 +266,13 @@ fun DetailScreen(
             title = { Text(stringResource(R.string.speaker_rename_title, speaker)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        singleLine = true,
-                        placeholder = { Text("Speaker $speaker") },
-                    )
-                    Text(
-                        stringResource(R.string.speaker_rename_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true, placeholder = { Text("Speaker $speaker") }, shape = RoundedCornerShape(12.dp))
+                    Text(stringResource(R.string.speaker_rename_hint), style = AppleType.footnote, color = c.secondaryLabel)
                 }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    editingSpeaker = null
-                    onRenameSpeaker(speaker, value)
-                }) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingSpeaker = null }) { Text(stringResource(R.string.action_cancel)) }
-            },
+            confirmButton = { TextButton(onClick = { editingSpeaker = null; onRenameSpeaker(speaker, value) }) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TextButton(onClick = { editingSpeaker = null }) { Text(stringResource(R.string.action_cancel)) } },
+            shape = RoundedCornerShape(28.dp),
         )
     }
 
@@ -253,198 +281,217 @@ fun DetailScreen(
         AlertDialog(
             onDismissRequest = { renaming = false },
             title = { Text(stringResource(R.string.rename_title)) },
-            text = { OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true) },
-            confirmButton = {
-                TextButton(onClick = {
-                    renaming = false
-                    onRename(value)
-                }) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.action_cancel)) }
-            },
+            text = { OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true, shape = RoundedCornerShape(12.dp)) },
+            confirmButton = { TextButton(onClick = { renaming = false; onRename(value) }) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.action_cancel)) } },
+            shape = RoundedCornerShape(28.dp),
         )
     }
+}
+
+@Composable
+private fun MetaLine(recording: Recording) {
+    val c = Apple.colors
+    Column(Modifier.padding(horizontal = 20.dp)) {
+        val who = if (recording.isCall) listOfNotNull(recording.callContactName, recording.callNumber).joinToString(" · ") else null
+        if (!who.isNullOrBlank() && who != recording.title) {
+            Text(who, style = AppleType.subheadline.auto(who), color = c.label)
+        }
+        Text(
+            "${formatDate(recording.createdAt)} · ${formatDuration(recording.durationMs)} · ${statusLabel(recording.status)}",
+            style = AppleType.footnote, color = c.secondaryLabel,
+        )
+        recording.transcribedBy?.let {
+            Text(stringResource(R.string.detail_transcribed_by, providerDisplayName(it)), style = AppleType.footnote, color = c.tint)
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text, style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold).auto(text), color = Apple.colors.secondaryLabel,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp),
+    )
+}
+
+@Composable
+private fun EmptyNote(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = Apple.colors.tertiaryLabel, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = AppleType.subheadline.auto(text), color = Apple.colors.secondaryLabel)
+    }
+}
+
+@Composable
+private fun SpeakerChip(id: String, names: Map<String, String>, onClick: () -> Unit) {
+    val label = Speakers.label(id, names)
+    val color = speakerColor(id)
+    val source = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    Row(
+        Modifier.height(40.dp).pressScale(source, 0.95f).glass(CircleShape, elevation = 3.dp)
+            .clickable(source, indication = null, role = Role.Button) { haptics.tap(); onClick() }
+            .padding(start = 6.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(28.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(color.copy(alpha = 0.7f), color))), contentAlignment = Alignment.Center) {
+            Text(HomeLogic.initials(label)?.take(1) ?: id, color = Color.White, style = AppleType.footnote.copy(fontWeight = FontWeight.Bold))
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = AppleType.subheadline.copy(fontWeight = FontWeight.SemiBold).auto(label), color = Apple.colors.label, maxLines = 1)
+        Spacer(Modifier.width(6.dp))
+        Icon(Icons.Filled.Edit, null, tint = Apple.colors.tertiaryLabel, modifier = Modifier.size(14.dp))
+    }
+}
+
+@Composable
+fun speakerColor(id: String): Color {
+    val c = Apple.colors
+    val palette = listOf(c.tint, c.orange, c.purple, c.green, c.pink, c.teal)
+    return palette[((id.toIntOrNull() ?: 1) - 1).mod(palette.size)]
+}
+
+/** Transcript as tappable lines: tapping a line with a timestamp seeks the player there. */
+@Composable
+private fun TranscriptView(recording: Recording, player: PlayerController?, waveform: Waveform?) {
+    val c = Apple.colors
+    val haptics = rememberHaptics()
+    val turns = remember(recording.transcript, recording.speakerTurns) {
+        recording.speakerTurns.ifEmpty { Speakers.parse(recording.transcript.orEmpty()) }
+            .filter { it.text.trim().let { t -> t.isNotEmpty() && t != "." } }
+    }
+    val timed = player != null && turns.any { it.startMs != null }
+    // Offset of each segment file from the start of the recording (for global timestamps).
+    val segmentStart = remember(waveform, player?.paths) {
+        val names = player?.paths?.map { File(it).name }.orEmpty()
+        val lens = waveform?.segmentWindows?.map { it * Waveform.WINDOW_MS }.orEmpty()
+        names.mapIndexed { i, n -> n to lens.take(i).sum() }.toMap()
+    }
+    val (playingSeg, playingOffset) = player?.segmentPosition() ?: (null to -1L)
+
+    val content: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            var previous: String? = null
+            turns.forEach { turn ->
+                val text = turn.text.trim()
+                val start = turn.startMs
+                val active = timed && start != null && player!!.playing.or(player.positionMs > 0) &&
+                    (turn.audioSegment == null || turn.audioSegment == playingSeg) &&
+                    playingOffset >= start && playingOffset < (turn.endMs ?: (start + 1))
+                val bg by animateColorAsState(if (active) c.tint.copy(alpha = 0.12f) else Color.Transparent, label = "line")
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
+                        .then(
+                            if (timed && start != null) Modifier.clickable {
+                                haptics.selection(); player!!.seekSegment(turn.audioSegment, start); player.play()
+                            } else Modifier,
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    if (turn.speaker != null && turn.speaker != previous) {
+                        val label = Speakers.label(turn.speaker, recording.speakerNames)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, style = AppleType.subheadline.copy(fontWeight = FontWeight.SemiBold).auto(label), color = speakerColor(turn.speaker))
+                            if (start != null) {
+                                Spacer(Modifier.width(8.dp))
+                                val global = start + (segmentStart[turn.audioSegment] ?: 0L)
+                                Text(formatDuration(global), style = AppleType.caption.copy(fontFeatureSettings = "tnum"), color = c.tertiaryLabel)
+                            }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                    }
+                    Text(text, style = AppleType.body.auto(text), color = c.label)
+                }
+                previous = turn.speaker
+            }
+        }
+    }
+    if (timed) content() else SelectionContainer { content() }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SpeakerChips(ids: List<String>, names: Map<String, String>, onEdit: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            stringResource(R.string.speakers_title),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ids.forEach { id ->
-                AssistChip(
-                    onClick = { onEdit(id) },
-                    label = { Text(Speakers.label(id, names)) },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(18.dp))
-                    },
-                    colors = AssistChipDefaults.assistChipColors(labelColor = speakerColor(id)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TranscriptView(transcript: String, names: Map<String, String>) {
-    val turns = remember(transcript) { Speakers.parse(transcript) }
-    SelectionContainer {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            turns.forEach { turn ->
-                // Skip empty or punctuation-only utterances
-                val cleanText = turn.text.trim()
-                if (cleanText.isEmpty() || cleanText == ".") return@forEach
-                
-                val textDirection = TextDirectionDetector.detectDirection(cleanText)
-                
-                Column {
-                    if (turn.speaker != null) {
-                        val speakerLabel = Speakers.label(turn.speaker, names)
-                        val speakerDirection = TextDirectionDetector.detectDirection(speakerLabel)
-                        Text(
-                            speakerLabel,
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                textDirection = speakerDirection,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
-                            ),
-                            color = speakerColor(turn.speaker),
-                        )
-                    }
-                    Text(
-                        cleanText,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textDirection = textDirection,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun speakerColor(id: String): Color {
-    val palette = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-        MaterialTheme.colorScheme.secondary,
-        MaterialTheme.colorScheme.error,
-    )
-    return palette[((id.toIntOrNull() ?: 1) - 1).mod(palette.size)]
-}
-
-@Composable
 private fun ProcessButtons(recording: Recording, canProcess: Boolean, onProcess: (Boolean) -> Unit) {
     if (recording.status.isBusy || recording.status == RecordingStatus.RECORDING) return
     if (recording.segments.isEmpty()) return
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (recording.transcript.isNullOrBlank() || recording.status == RecordingStatus.FAILED) {
-            Button(enabled = canProcess, onClick = { onProcess(!recording.transcript.isNullOrBlank()) }) {
-                Text(
-                    stringResource(
-                        if (recording.status == RecordingStatus.FAILED) R.string.action_retry else R.string.action_transcribe,
-                    ),
+    val hasTranscript = !recording.transcript.isNullOrBlank()
+    FlowRow(
+        Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (!hasTranscript || recording.status == RecordingStatus.FAILED) {
+            CapsuleButton(
+                stringResource(if (recording.status == RecordingStatus.FAILED) R.string.action_retry else R.string.action_transcribe),
+                { onProcess(hasTranscript) },
+                style = CapsuleStyle.Filled,
+                icon = if (recording.status == RecordingStatus.FAILED) Icons.Filled.Refresh else Icons.Filled.GraphicEq,
+                enabled = canProcess,
+            )
+        }
+        if (hasTranscript && recording.status != RecordingStatus.FAILED) {
+            CapsuleButton(stringResource(R.string.action_retranscribe), { onProcess(false) }, icon = Icons.Filled.GraphicEq, enabled = canProcess)
+        }
+        if (hasTranscript) {
+            CapsuleButton(stringResource(R.string.action_resummarize), { onProcess(true) }, icon = Icons.Filled.AutoAwesome, enabled = canProcess, color = Apple.colors.purple)
+        }
+    }
+}
+
+/** Floating glass player with a waveform scrubber, ±10 s and play/pause. */
+@Composable
+private fun PlayerBar(player: PlayerController, waveform: Waveform?, bookmarks: List<Long>, modifier: Modifier = Modifier) {
+    val c = Apple.colors
+    val haptics = rememberHaptics()
+    val duration = player.durationMs.takeIf { it > 0 } ?: waveform?.durationMs ?: 0L
+    val progress = if (duration > 0) player.positionMs.toFloat() / duration else 0f
+    Column(
+        modifier.fillMaxWidth().glass(RoundedCornerShape(30.dp), elevation = 18.dp).padding(horizontal = 18.dp, vertical = 12.dp),
+    ) {
+        WaveformScrubber(
+            waveform = waveform,
+            progress = progress,
+            onSeek = { f -> player.seekGlobal((f * duration).toLong()) },
+            markers = if (duration > 0) bookmarks.map { (it.toFloat() / duration).coerceIn(0f, 1f) } else emptyList(),
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(formatDuration(player.positionMs), style = AppleType.caption.copy(fontFeatureSettings = "tnum"), color = c.secondaryLabel)
+            Spacer(Modifier.weight(1f))
+            if (player.paths.size > 1) {
+                Text(stringResource(R.string.part_of, player.segmentIndex + 1, player.paths.size), style = AppleType.caption, color = c.tertiaryLabel)
+                Spacer(Modifier.weight(1f))
+            }
+            Text("-" + formatDuration((duration - player.positionMs).coerceAtLeast(0)), style = AppleType.caption.copy(fontFeatureSettings = "tnum"), color = c.secondaryLabel)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            PlainIcon(Icons.Filled.Replay10, stringResource(R.string.player_back10)) { haptics.tap(); player.skip(-10_000) }
+            val source = remember { MutableInteractionSource() }
+            Box(
+                Modifier.size(54.dp).pressScale(source, 0.9f).clip(CircleShape).background(c.label)
+                    .clickable(source, indication = null, role = Role.Button) { haptics.tap(); player.toggle() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (player.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    stringResource(if (player.playing) R.string.action_pause else R.string.action_play),
+                    tint = c.background, modifier = Modifier.size(30.dp),
                 )
             }
-        }
-        if (!recording.transcript.isNullOrBlank() && recording.status != RecordingStatus.FAILED) {
-            OutlinedButton(enabled = canProcess, onClick = { onProcess(false) }) {
-                Text(stringResource(R.string.action_retranscribe))
-            }
-        }
-        if (!recording.transcript.isNullOrBlank()) {
-            OutlinedButton(enabled = canProcess, onClick = { onProcess(true) }) {
-                Text(stringResource(R.string.action_resummarize))
-            }
+            PlainIcon(Icons.Filled.Forward10, stringResource(R.string.player_forward10)) { haptics.tap(); player.skip(10_000) }
         }
     }
 }
 
 @Composable
-private fun AudioPlayer(paths: List<String>) {
-    val context = LocalContext.current
-    val player = remember(paths) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItems(paths.map { MediaItem.fromUri(Uri.fromFile(File(it))) })
-            prepare()
-        }
-    }
-    var playing by remember { mutableStateOf(false) }
-    var position by remember { mutableLongStateOf(0L) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var index by remember { mutableIntStateOf(0) }
-    var dragging by remember { mutableStateOf(false) }
-    var dragValue by remember { mutableFloatStateOf(0f) }
-
-    DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                playing = isPlaying
-            }
-        }
-        player.addListener(listener)
-        onDispose {
-            player.removeListener(listener)
-            player.release()
-        }
-    }
-    LaunchedEffect(player) {
-        while (true) {
-            position = player.currentPosition
-            duration = player.duration.coerceAtLeast(0L)
-            index = player.currentMediaItemIndex
-            delay(250)
-        }
-    }
-
-    Card(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FilledTonalIconButton(onClick = { if (player.isPlaying) player.pause() else player.play() }) {
-                if (playing) {
-                    Icon(Icons.Filled.Pause, contentDescription = stringResource(R.string.action_pause))
-                } else {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.action_play))
-                }
-            }
-            Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                Slider(
-                    value = if (dragging) dragValue else if (duration > 0) position.toFloat() / duration else 0f,
-                    onValueChange = {
-                        dragging = true
-                        dragValue = it
-                    },
-                    onValueChangeFinished = {
-                        if (duration > 0) player.seekTo((dragValue * duration).toLong())
-                        dragging = false
-                    },
-                )
-                Row {
-                    Text(
-                        "${formatDuration(position)} / ${formatDuration(duration)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (paths.size > 1) {
-                        Text(
-                            stringResource(R.string.part_of, index + 1, paths.size),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-            }
-        }
-    }
+private fun PlainIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, onClick: () -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    Box(
+        Modifier.size(48.dp).pressScale(source, 0.85f).clip(CircleShape).clickable(source, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, description, tint = Apple.colors.label, modifier = Modifier.size(28.dp)) }
 }
 
 private fun providerDisplayName(providerId: String): String = when (providerId) {
