@@ -113,6 +113,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Adds / edits / (blank text) deletes the note on a transcript line. */
+    fun saveComment(recordingId: String, lineIndex: Int, line: com.riffado.meetings.data.Speakers.Turn, text: String) {
+        viewModelScope.launch {
+            app.recordings.update(recordingId) {
+                it.copy(comments = com.riffado.meetings.data.Comments.upsert(it.comments, lineIndex, line, text, System.currentTimeMillis()))
+            }
+        }
+    }
+
     // ---- Tasks ----
     data class ExtractionProgress(val done: Int, val total: Int)
 

@@ -286,6 +286,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                             },
                             onRenameSpeaker = { speaker, name -> viewModel.renameSpeaker(recording.id, speaker, name) },
                             onAsk = { screen = ASK_PREFIX + recording.id },
+                            onSaveComment = { index, line, text -> viewModel.saveComment(recording.id, index, line, text) },
                             onExtractTasks = {
                                 viewModel.extractTasks(listOf(recording.id)) { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                             },

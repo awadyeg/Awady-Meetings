@@ -25,7 +25,7 @@ object AskAi {
         val text: String,
         val index: Int,
     ) {
-        enum class Kind { SUMMARY, TRANSCRIPT }
+        enum class Kind { SUMMARY, NOTES, TRANSCRIPT }
     }
 
     /** A numbered source handed to the model; citations `[n]` refer to [number]. */
@@ -73,6 +73,9 @@ object AskAi {
         recording.summary?.takeIf { it.isNotBlank() }?.let {
             out += Passage(recording.id, recording.title, recording.createdAt, Passage.Kind.SUMMARY, it.trim(), 0)
         }
+        notesText(recording)?.let {
+            out += Passage(recording.id, recording.title, recording.createdAt, Passage.Kind.NOTES, it, NOTES_INDEX)
+        }
         val transcript = recording.transcript?.takeIf { it.isNotBlank() } ?: return out
         val named = Speakers.applyNames(transcript, recording.speakerNames)
         // TranscriptChunker works in tokens; convert our char target back with its own ratio.
@@ -83,6 +86,17 @@ object AskAi {
                 out += Passage(recording.id, recording.title, recording.createdAt, Passage.Kind.TRANSCRIPT, chunk.trim(), i + 1)
             }
         return out
+    }
+
+    private const val NOTES_INDEX = 100_000
+
+    /** The user's own notes on transcript lines, as one passage ("On “quote”: note"). */
+    fun notesText(recording: Recording): String? {
+        if (recording.comments.isEmpty()) return null
+        return "User's notes on the transcript:\n" + recording.comments.joinToString("\n") { c ->
+            val who = c.speaker?.let { Speakers.label(it, recording.speakerNames) + ": " }.orEmpty()
+            "- On \"$who${c.quote}\": ${c.text}"
+        }
     }
 
     /** BM25 ranking. Title / contact matches and summaries get a small boost. Returns (passage, score) best first. */
@@ -111,7 +125,7 @@ object AskAi {
                 val rec = byId[p.recordingId]
                 val meta = tokenize(listOfNotNull(rec?.title, rec?.callContactName).joinToString(" ")).toSet()
                 if (query.any { it in meta }) score *= 1.3
-                if (p.kind == Passage.Kind.SUMMARY) score *= 1.15
+                if (p.kind != Passage.Kind.TRANSCRIPT) score *= 1.15
             }
             p to score
         }.filter { it.second > 0 }.sortedByDescending { it.second }
@@ -141,7 +155,7 @@ object AskAi {
 
         val ranked = rank(pool, question).map { it.first }
         val ordered = buildList {
-            if (scopedTo != null) addAll(pool.flatMap { passages(it) }.filter { it.kind == Passage.Kind.SUMMARY })
+            if (scopedTo != null) addAll(pool.flatMap { passages(it) }.filter { it.kind != Passage.Kind.TRANSCRIPT })
             addAll(ranked)
             if (scopedTo != null) addAll(pool.flatMap { passages(it) })          // then the rest, in order
             if (ranked.isEmpty() && scopedTo == null) {
@@ -175,7 +189,13 @@ object AskAi {
         numbers.values.forEach { src ->
             body.append("[${src.number}] \"${src.title}\" — ${dateFmt.format(Date(src.createdAt))}\n")
             picked.filter { it.recordingId == src.recordingId }.forEach { p ->
-                body.append(if (p.kind == Passage.Kind.SUMMARY) "Summary:\n" else "Transcript excerpt:\n")
+                body.append(
+                    when (p.kind) {
+                        Passage.Kind.SUMMARY -> "Summary:\n"
+                        Passage.Kind.NOTES -> ""
+                        Passage.Kind.TRANSCRIPT -> "Transcript excerpt:\n"
+                    },
+                )
                 body.append(p.text).append("\n")
             }
             body.append("\n")

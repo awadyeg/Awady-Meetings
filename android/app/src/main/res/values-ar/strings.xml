@@ -261,4 +261,9 @@
         <item quantity="other">لقيت %1$d مهمة في %2$d تسجيل</item>
     </plurals>
     <string name="tasks_earlier">قبل كده</string>
+    <string name="comments_hint">اضغط مطوّل على أي سطر عشان تضيف ملاحظة</string>
+    <string name="comments_add">إضافة ملاحظة</string>
+    <string name="comments_edit">تعديل الملاحظة</string>
+    <string name="comments_placeholder">اكتب ملاحظة عن السطر ده…</string>
+    <string name="comments_orphans">ملاحظات على نسخة قديمة من التفريغ</string>
 </resources>

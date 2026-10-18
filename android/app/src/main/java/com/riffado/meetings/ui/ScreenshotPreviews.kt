@@ -90,6 +90,13 @@ object PreviewData {
         busy = true,
     )
 
+    val commented = detail.copy(
+        comments = listOf(
+            com.riffado.meetings.data.LineComment("c1", 1, "الشاشة الرئيسية خلصت والـ glass effect شغال.", "نتأكد من الأداء على الأجهزة القديمة قبل الإصدار", "2", 4_000, now, now),
+            com.riffado.meetings.data.LineComment("c2", 3, "Done too, with bookmarks.", "Ask Sara for the bookmark export format", "2", 12_000, now, now),
+        ),
+    )
+
     val levels = List(160) { i -> (abs(sin(i / 3.0)) * (0.3 + 0.7 * abs(sin(i / 17.0)))).toFloat() * 0.6f }
 }
 
@@ -130,6 +137,15 @@ fun PreviewDetail(transcriptTab: Boolean = false) {
     DetailScreen(
         recording = rec, segmentPaths = emptyList(), canProcess = true,
         onBack = {}, onProcess = {}, onRename = {}, onRenameSpeaker = { _, _ -> }, onDelete = {},
+    )
+}
+
+@Composable
+fun PreviewComments(editLine: Int? = null) {
+    DetailScreen(
+        recording = PreviewData.commented, segmentPaths = emptyList(), canProcess = true,
+        onBack = {}, onProcess = {}, onRename = {}, onRenameSpeaker = { _, _ -> }, onDelete = {},
+        previewEditLine = editLine, initialTab = 1,
     )
 }
 

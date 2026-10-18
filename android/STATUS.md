@@ -59,6 +59,9 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 1 Liquid Glass redesign** | done — builds, lint clean (warnings only), unit tests green; NOT device-tested |
 | **Phase 2 Ask AI** (global + per-recording chat with cited, tappable sources) | done — unit-tested retrieval; NOT tested against a live provider |
 | **Phase 2 Tasks + dates extraction + calendar** | done — unit-tested parsing/grouping; NOT tested against a live provider or a real calendar app |
+| **Phase 3 Comments on transcript lines** | done — unit + persistence tests; NOT device-tested |
+| **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | todo |
+| **Phase 3 Person page** | todo |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -96,15 +99,24 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | Detail ⋯ menu: "Extract tasks (n)" re-runs extraction for that recording | done |
 | Version bump: `versionCode 2`, `versionName "2.1.0-phase2"` (debug `versionNameSuffix "-v2"` removed so the installed name is exactly `2.1.0-phase2`; applicationId suffix `.v2` unchanged) | done |
 
+### Phase 3 — Comments, export, person page (in progress)
+| Item | Status |
+|---|---|
+| `data/Comments.kt` — `LineComment` (line index + quote + speaker + timestamp), stored in `Recording.comments` (recordings.json, backward compatible); `Comments.lines` (the exact lines the transcript view shows), `upsert` (add / edit / blank = delete, one note per line), `anchor` (re-anchors by quote after re-transcription, else "orphan"); `CommentsTest` (6 tests incl. RecordingStore round-trip via Robolectric and Ask AI context) | done |
+| Detail transcript: long-press a line → glass bottom sheet editor (`CommentViews.kt`: quote, text, Save / Cancel / Delete; ar strings); notes shown inline under the line as glass note bubbles (tap to edit); orphaned notes listed at the end | done |
+| Ask AI: notes are a separate retrieval passage per recording (`AskAi.notesText`), always included for per-recording chats | done |
+| Exports include notes | todo (item 2) |
+
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
 2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _Done, awaiting device test._
-4. Bookmarks + comments — markers during recording, comments on transcript lines.
-5. Export — PDF, Notion, WhatsApp share.
-6. Person page — all calls/meetings/tasks per contact.
-7. MCP server — expose recordings/transcripts/tasks to external agents.
+3. **Phase 3** — comments on transcript lines, export & share (PDF / Markdown / WhatsApp / Notion), person page. _In progress._
+4. MCP server — expose recordings/transcripts/tasks to external agents.
+(Bookmarks during recording shipped in Phase 1.)
 
 ## Known issues / notes
+- The transcript is no longer wrapped in a `SelectionContainer` (long-press is now "add note"), so text can't be selected/copied there; use Share / Export instead.
+- 2026-10-18 ~19:45: the box was restored to an earlier snapshot after a hung screenshot run; uncommitted/unpushed Phase 3 work was lost and redone. Long Gradle runs now use `timeout`.
 - Task extraction runs once after each summary; recordings summarized before Phase 2 need "Extract from older recordings" (Tasks ⋯ menu or banner). Bulk extraction is sequential (one provider call per recording) and runs in the activity's ViewModel, so it stops if the app is killed.
 - Relative dates are resolved by the model against the recording date; the result is only as good as the model (Groq/Llama may get "next Thursday" wrong). Long recordings without a summary only send the first 9000 chars of transcript.
 - "Add all" opens one calendar insert screen per task (stacked); the user saves each. There is no silent bulk insert because that would need WRITE_CALENDAR.
@@ -124,10 +136,11 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 
 ## Next steps
 1. Install `riffado-v2-phase2.apk` (versionCode 2, installs over Phase 1) on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
-2. Device test Phase 2: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
+2. Device test Phase 2: Ask AI with Groq (e.g. `openai/gpt-oss-120b`), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
 3. Fix device findings (bump `versionCode` for each release), then Phase 3 (bookmarks + comments).
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 3 item 1 — notes on transcript lines (long-press editor, inline glass notes, persisted, in Ask AI context), tests, screenshots `comment*`.
 - 2026-10-18: Phase 2 verified (build + lint + 74 tests), APK `riffado-v2-phase2.apk`.
 - 2026-10-18: Phase 2 item 3 — versionCode 2 / versionName 2.1.0-phase2.
 - 2026-10-18: Phase 2 item 2 — tasks + dates extraction (JSON), real Tasks tab, Add to calendar (single + all), re-extract on demand, tests, screenshots `tasks_*`.

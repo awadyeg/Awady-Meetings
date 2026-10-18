@@ -36,6 +36,9 @@ class RedesignScreenshotTest {
 
     @Test fun tasksDark() = shot("tasks_dark", true) { PreviewTasks() }
     @Test fun tasksExtracting() = shot("tasks_done_extracting_light", false) { PreviewTasksDone() }
+    @Test fun commentsLight() = shot("comments_light", false) { PreviewComments() }
+    @Test fun commentsDark() = shot("comments_dark", true) { PreviewComments() }
+    @Test fun commentEditorLight() = shot("comment_editor_light", false) { PreviewComments(editLine = 3) }
     @Test fun askAiLight() = shot("ask_ai_light", false) { PreviewAskAi() }
     @Test fun askAiEmptyDark() = shot("ask_ai_empty_dark", true) { PreviewAskAi(empty = true) }
 
@@ -44,6 +47,9 @@ class RedesignScreenshotTest {
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun tasksArabicRtl() = shot("tasks_ar_rtl", false) { PreviewTasks() }
+
+    @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
+    @Test fun commentsArabicRtl() = shot("comments_ar_rtl", false) { PreviewComments(editLine = 1) }
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun homeArabicRtl() = shot("home_ar_rtl", false) { PreviewHome() }

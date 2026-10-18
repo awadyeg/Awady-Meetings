@@ -43,6 +43,8 @@ data class Recording(
     val bookmarks: List<Long> = emptyList(),
     /** When tasks were last extracted from this recording's minutes (null = never). */
     val tasksExtractedAt: Long? = null,
+    /** User notes on transcript lines. */
+    val comments: List<LineComment> = emptyList(),
 ) {
     val isCall: Boolean get() = "call" in tags
     

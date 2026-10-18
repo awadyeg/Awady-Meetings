@@ -245,4 +245,9 @@
         <item quantity="other">Found %1$d tasks in %2$d recording(s)</item>
     </plurals>
     <string name="tasks_earlier">Earlier</string>
+    <string name="comments_hint">Long-press a line to add a note</string>
+    <string name="comments_add">Add note</string>
+    <string name="comments_edit">Edit note</string>
+    <string name="comments_placeholder">Write a note about this line…</string>
+    <string name="comments_orphans">Notes on an earlier version of the transcript</string>
 </resources>

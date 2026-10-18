@@ -77,6 +77,9 @@ import com.riffado.meetings.R
 import com.riffado.meetings.data.Recording
 import com.riffado.meetings.data.RecordingStatus
 import com.riffado.meetings.data.Speakers
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.riffado.meetings.data.Comments
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import java.io.File
@@ -97,10 +100,16 @@ fun DetailScreen(
     onAsk: () -> Unit = {},
     onExtractTasks: (() -> Unit)? = null,
     taskCount: Int = 0,
+    onSaveComment: (lineIndex: Int, line: Speakers.Turn, text: String) -> Unit = { _, _, _ -> },
+    previewEditLine: Int? = null,
+    initialTab: Int? = null,
 ) {
     val context = LocalContext.current
     val c = Apple.colors
-    var tab by rememberSaveable(recording.id) { mutableIntStateOf(if (recording.summary != null) 0 else 1) }
+    var tab by rememberSaveable(recording.id) { mutableIntStateOf(initialTab ?: if (recording.summary != null) 0 else 1) }
+    var editingLine by remember(recording.id) { mutableStateOf(previewEditLine) }
+    val lines = remember(recording.transcript, recording.speakerTurns) { Comments.lines(recording) }
+    val anchored = remember(recording.comments, lines) { Comments.anchor(recording.comments, lines.map { it.text }) }
     var confirmDelete by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
@@ -198,7 +207,7 @@ fun DetailScreen(
                             else SimpleMarkdown(summary)
                         } else {
                             if (recording.transcript.isNullOrBlank()) EmptyNote(stringResource(R.string.transcript_empty), Icons.Filled.GraphicEq)
-                            else TranscriptView(recording, player, waveform)
+                            else TranscriptView(recording, lines, anchored, player, waveform, onEditLine = { editingLine = it })
                         }
                     }
                 }
@@ -263,6 +272,21 @@ fun DetailScreen(
                     player, waveform, recording.bookmarks,
                     Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 12.dp, vertical = 10.dp),
                 )
+            }
+
+            editingLine?.let { index ->
+                lines.getOrNull(index)?.let { line ->
+                    val existing = anchored.byLine[index]
+                    CommentEditor(
+                        speaker = line.speaker?.let { Speakers.label(it, recording.speakerNames) },
+                        quote = line.text.trim(),
+                        initial = existing?.text.orEmpty(),
+                        canDelete = existing != null,
+                        onSave = { text -> editingLine = null; onSaveComment(index, line, text) },
+                        onDelete = { editingLine = null; onSaveComment(index, line, "") },
+                        onDismiss = { editingLine = null },
+                    )
+                }
             }
         }
     }
@@ -374,15 +398,22 @@ fun speakerColor(id: String): Color {
     return palette[((id.toIntOrNull() ?: 1) - 1).mod(palette.size)]
 }
 
-/** Transcript as tappable lines: tapping a line with a timestamp seeks the player there. */
+/**
+ * Transcript as tappable lines: tapping a line with a timestamp seeks the player there; long-press
+ * adds or edits a note on that line. Notes show inline under their line.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TranscriptView(recording: Recording, player: PlayerController?, waveform: Waveform?) {
+private fun TranscriptView(
+    recording: Recording,
+    turns: List<Speakers.Turn>,
+    anchored: Comments.Anchored,
+    player: PlayerController?,
+    waveform: Waveform?,
+    onEditLine: (Int) -> Unit,
+) {
     val c = Apple.colors
     val haptics = rememberHaptics()
-    val turns = remember(recording.transcript, recording.speakerTurns) {
-        recording.speakerTurns.ifEmpty { Speakers.parse(recording.transcript.orEmpty()) }
-            .filter { it.text.trim().let { t -> t.isNotEmpty() && t != "." } }
-    }
     val timed = player != null && turns.any { it.startMs != null }
     // Offset of each segment file from the start of the recording (for global timestamps).
     val segmentStart = remember(waveform, player?.paths) {
@@ -392,44 +423,70 @@ private fun TranscriptView(recording: Recording, player: PlayerController?, wave
     }
     val (playingSeg, playingOffset) = player?.segmentPosition() ?: (null to -1L)
 
-    val content: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            var previous: String? = null
-            turns.forEach { turn ->
-                val text = turn.text.trim()
-                val start = turn.startMs
-                val active = timed && start != null && player!!.playing.or(player.positionMs > 0) &&
-                    (turn.audioSegment == null || turn.audioSegment == playingSeg) &&
-                    playingOffset >= start && playingOffset < (turn.endMs ?: (start + 1))
-                val bg by animateColorAsState(if (active) c.tint.copy(alpha = 0.12f) else Color.Transparent, label = "line")
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
-                        .then(
-                            if (timed && start != null) Modifier.clickable {
-                                haptics.selection(); player!!.seekSegment(turn.audioSegment, start); player.play()
-                            } else Modifier,
-                        )
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                ) {
-                    if (turn.speaker != null && turn.speaker != previous) {
-                        val label = Speakers.label(turn.speaker, recording.speakerNames)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(label, style = AppleType.subheadline.copy(fontWeight = FontWeight.SemiBold).auto(label), color = speakerColor(turn.speaker))
-                            if (start != null) {
-                                Spacer(Modifier.width(8.dp))
-                                val global = start + (segmentStart[turn.audioSegment] ?: 0L)
-                                Text(formatDuration(global), style = AppleType.caption.copy(fontFeatureSettings = "tnum"), color = c.tertiaryLabel)
-                            }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.comments_hint), style = AppleType.caption, color = c.tertiaryLabel,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+        var previous: String? = null
+        turns.forEachIndexed { index, turn ->
+            val text = turn.text.trim()
+            val start = turn.startMs
+            val active = timed && start != null && player!!.playing.or(player.positionMs > 0) &&
+                (turn.audioSegment == null || turn.audioSegment == playingSeg) &&
+                playingOffset >= start && playingOffset < (turn.endMs ?: (start + 1))
+            val note = anchored.byLine[index]
+            val bg by animateColorAsState(
+                when {
+                    active -> c.tint.copy(alpha = 0.12f)
+                    note != null -> c.orange.copy(alpha = 0.08f)
+                    else -> Color.Transparent
+                },
+                label = "line",
+            )
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
+                    .combinedClickable(
+                        onClick = {
+                            if (timed && start != null) { haptics.selection(); player!!.seekSegment(turn.audioSegment, start); player.play() }
+                        },
+                        onLongClick = { haptics.heavy(); onEditLine(index) },
+                        onLongClickLabel = stringResource(R.string.comments_add),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                if (turn.speaker != null && turn.speaker != previous) {
+                    val label = Speakers.label(turn.speaker, recording.speakerNames)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, style = AppleType.subheadline.copy(fontWeight = FontWeight.SemiBold).auto(label), color = speakerColor(turn.speaker))
+                        if (start != null) {
+                            Spacer(Modifier.width(8.dp))
+                            val global = start + (segmentStart[turn.audioSegment] ?: 0L)
+                            Text(formatDuration(global), style = AppleType.caption.copy(fontFeatureSettings = "tnum"), color = c.tertiaryLabel)
                         }
-                        Spacer(Modifier.height(2.dp))
                     }
-                    Text(text, style = AppleType.body.auto(text), color = c.label, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(2.dp))
                 }
-                previous = turn.speaker
+                Text(text, style = AppleType.body.auto(text), color = c.label, modifier = Modifier.fillMaxWidth())
+                if (note != null) {
+                    Spacer(Modifier.height(6.dp))
+                    NoteBubble(note.text, onClick = { haptics.tap(); onEditLine(index) })
+                }
+            }
+            previous = turn.speaker
+        }
+        if (anchored.orphans.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.comments_orphans), style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold), color = c.secondaryLabel, modifier = Modifier.padding(horizontal = 8.dp))
+            anchored.orphans.forEach { o ->
+                Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text("“${o.quote}”", style = AppleType.footnote.auto(o.quote), color = c.secondaryLabel, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(4.dp))
+                    NoteBubble(o.text, onClick = null)
+                }
             }
         }
     }
-    if (timed) content() else SelectionContainer { content() }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
