@@ -62,13 +62,14 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Apple theme (colours, type, dark/light) | done |
 | Glass primitives (Haze blur + fallback, specular rim, press springs, haptics) | done |
 | iOS component kit (large title, glass top bar, segmented control, search field, iOS switch, capsule buttons, avatars, inset groups/rows) + `HomeLogic` (grouping, snippets, initials, action items) with unit tests | done |
-| Floating glass tab bar (Home / Tasks / Settings) + centre record button | not started |
-| Large-title headers collapsing into glass top bar | not started |
-| Home grouped Today / Yesterday / This week / Older, glass cards | not started |
-| Full-screen recorder (live waveform, timer, pause/bookmark/stop) + mini pill | not started |
+| Floating glass tab bar (Recordings · Tasks · ⏺ · Search · Settings) with sliding glass lens + raised centre record button | done |
+| Large-title headers collapsing into glass top bar | done (Home, Tasks; Settings/Detail pending) |
+| Home grouped Today / Yesterday / This week / Older, glass cards, search field, segmented filter, people avatars row | done |
+| Full-screen recorder (live waveform, timer, pause/bookmark/stop) + mini pill | done (bookmarks saved to `Recording.bookmarks`) |
 | Detail: waveform scrubber, tap transcript line to seek, Summary/Transcript segments, speaker chips | not started |
 | Settings as iOS grouped inset lists (all existing settings kept) | not started |
 | Provider management restyle | not started |
+| Tasks tab placeholder (read-only open action items `- [ ]` from minutes) | done |
 | Compose preview screenshots | not started |
 
 ## Phase plan
@@ -89,5 +90,6 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 - Continue Phase 1 items in the table above.
 
 ## Changelog (newest first)
+- 2026-10-18: Navigation shell (tabs + push transitions + recorder overlay), new Home, Recorder, mini pill, tab bar, Tasks placeholder, waveform engine (`Waveform.kt`), `Recording.bookmarks`.
 - 2026-10-18: iOS component kit (`IosComponents.kt`) + `HomeLogic` with `HomeLogicTest`.
 - 2026-10-18: Phase 1 started — Apple theme + glass primitives; Haze dependency added; this STATUS.md created.

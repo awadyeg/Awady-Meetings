@@ -144,4 +144,28 @@
     <string name="settings_call_accessibility_disabled">غير مُفعّل</string>
     <string name="settings_call_permissions">الأذونات المطلوبة</string>
     <string name="settings_call_help">فعّل خدمة إمكانية الوصول لاكتشاف بداية المكالمة. سيسجل التطبيق الصوت من الميكروفون (قد يتم تسجيل الطرفين حسب الجهاز ومصدر الصوت).</string>
+    <string name="recorder_minimize">تصغير</string>
+    <string name="recorder_open">فتح المسجّل</string>
+    <string name="recorder_bookmark">إضافة علامة</string>
+    <string name="recorder_bookmarked">تمت إضافة علامة عند %1$s</string>
+    <plurals name="recorder_bookmarks">
+        <item quantity="zero">لا توجد علامات</item>
+        <item quantity="one">علامة واحدة</item>
+        <item quantity="two">علامتان</item>
+        <item quantity="few">%d علامات</item>
+        <item quantity="many">%d علامة</item>
+        <item quantity="other">%d علامة</item>
+    </plurals>
+    <string name="tab_home">التسجيلات</string>
+    <string name="tab_tasks">المهام</string>
+    <string name="tab_search">بحث</string>
+    <string name="tab_settings">الإعدادات</string>
+    <string name="section_today">اليوم</string>
+    <string name="section_yesterday">أمس</string>
+    <string name="section_this_week">هذا الأسبوع</string>
+    <string name="section_older">أقدم</string>
+    <string name="filter_everyone">الكل</string>
+    <string name="home_empty_title">لا توجد تسجيلات بعد</string>
+    <string name="tasks_preview_note">المهام المفتوحة من ملخصات اجتماعاتك. تحديد المهام كمنجزة ومزامنة التقويم قريبًا.</string>
+    <string name="tasks_empty">لا توجد مهام بعد. ستظهر هنا بعد تلخيص أي تسجيل.</string>
 </resources>

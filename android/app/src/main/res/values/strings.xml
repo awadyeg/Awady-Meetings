@@ -144,4 +144,24 @@
     <string name="settings_call_accessibility_disabled">Not enabled</string>
     <string name="settings_call_permissions">Required permissions</string>
     <string name="settings_call_help">Enable the Accessibility Service to detect when a call starts. The app will record audio from your microphone (both sides of the call may be recorded depending on device and audio source).</string>
+    <string name="recorder_minimize">Minimize</string>
+    <string name="recorder_open">Open recorder</string>
+    <string name="recorder_bookmark">Add bookmark</string>
+    <string name="recorder_bookmarked">Bookmarked at %1$s</string>
+    <plurals name="recorder_bookmarks">
+        <item quantity="one">%d bookmark</item>
+        <item quantity="other">%d bookmarks</item>
+    </plurals>
+    <string name="tab_home">Recordings</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_settings">Settings</string>
+    <string name="section_today">Today</string>
+    <string name="section_yesterday">Yesterday</string>
+    <string name="section_this_week">This week</string>
+    <string name="section_older">Older</string>
+    <string name="filter_everyone">Everyone</string>
+    <string name="home_empty_title">No recordings yet</string>
+    <string name="tasks_preview_note">Open action items from your meeting minutes. Checking off and calendar sync are coming soon.</string>
+    <string name="tasks_empty">No action items yet. They appear here after a recording is summarized.</string>
 </resources>

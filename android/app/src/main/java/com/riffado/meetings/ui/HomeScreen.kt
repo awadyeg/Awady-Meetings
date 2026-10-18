@@ -1,51 +1,44 @@
 package com.riffado.meetings.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +46,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,341 +59,291 @@ import com.riffado.meetings.R
 import com.riffado.meetings.data.Recording
 import com.riffado.meetings.data.RecordingStatus
 import com.riffado.meetings.recording.LiveRecording
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/** 0 → large title fully visible, 1 → scrolled past (inline title + glass bar). */
+@Composable
+fun LazyListState.collapseFraction(thresholdDp: Int = 48): Float {
+    val px = with(LocalDensity.current) { thresholdDp.dp.toPx() }
+    val f by remember(this, px) {
+        derivedStateOf { if (firstVisibleItemIndex > 0) 1f else (firstVisibleItemScrollOffset / px).coerceIn(0f, 1f) }
+    }
+    return f
+}
+
 @Composable
 fun HomeScreen(
     recordings: List<Recording>,
     live: LiveRecording,
     configured: Boolean,
-    onRecord: () -> Unit,
     onImport: () -> Unit,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStop: () -> Unit,
     onOpen: (String) -> Unit,
     onSettings: () -> Unit,
+    focusSearch: Int = 0,
+    bottomInset: androidx.compose.ui.unit.Dp = 140.dp,
 ) {
-    var filter by rememberSaveable { mutableStateOf("all") }
+    var filter by rememberSaveable { mutableStateOf(0) } // 0 all, 1 meetings, 2 calls
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedPerson by rememberSaveable { mutableStateOf<String?>(null) }
-    
-    // Extract people from recordings for the person filter
     val people = remember(recordings) { RecordingSearch.extractPeople(recordings) }
-    
-    // Apply filters in order: type filter -> person filter -> search
-    val filteredRecordings = recordings
-        .let { list ->
-            when (filter) {
-                "meetings" -> list.filter { !it.isCall }
-                "calls" -> list.filter { it.isCall }
-                else -> list
-            }
+
+    val filtered = remember(recordings, filter, selectedPerson, searchQuery) {
+        recordings
+            .let { list -> when (filter) { 1 -> list.filter { !it.isCall }; 2 -> list.filter { it.isCall }; else -> list } }
+            .let { list -> selectedPerson?.let { RecordingSearch.filterByPerson(list, it) } ?: list }
+            .let { list -> if (searchQuery.isBlank()) list else RecordingSearch.search(list, searchQuery) }
+    }
+    val groups = remember(filtered) { HomeLogic.group(filtered, System.currentTimeMillis()) }
+
+    val listState = rememberLazyListState()
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(focusSearch) {
+        if (focusSearch > 0) {
+            listState.animateScrollToItem(0)
+            runCatching { focus.requestFocus() }
         }
-        .let { list ->
-            selectedPerson?.let { person ->
-                RecordingSearch.filterByPerson(list, person)
-            } ?: list
-        }
-        .let { list ->
-            if (searchQuery.isBlank()) list else RecordingSearch.search(list, searchQuery)
-        }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.home_title)) },
-                actions = {
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.action_settings))
+    }
+
+    val haze = rememberHazeState()
+    val topPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TopBarHeight
+    val title = stringResource(R.string.home_title)
+    CompositionLocalProvider(LocalHazeState provides haze) {
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().hazeSource(haze)) {
+                AmbientBackdrop()
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = topPad, bottom = bottomInset),
+                ) {
+                    item(key = "title") { LargeTitle(title) }
+                    item(key = "search") {
+                        SearchField(
+                            searchQuery, { searchQuery = it }, stringResource(R.string.search_hint),
+                            Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            clearDescription = stringResource(R.string.action_clear),
+                            focusRequester = focus,
+                        )
                     }
+                    item(key = "filter") {
+                        SegmentedControl(
+                            listOf(stringResource(R.string.filter_all), stringResource(R.string.filter_meetings), stringResource(R.string.filter_calls)),
+                            filter, { filter = it },
+                            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        )
+                    }
+                    if (people.isNotEmpty()) {
+                        item(key = "people") { PeopleRow(people, selectedPerson) { selectedPerson = it } }
+                    }
+                    if (!configured) {
+                        item(key = "setup") { SetupCard(onSettings) }
+                    }
+                    if (filtered.isEmpty()) {
+                        item(key = "empty") { EmptyState(searching = searchQuery.isNotEmpty() || selectedPerson != null || filter != 0, onImport) }
+                    }
+                    groups.forEach { group ->
+                        item(key = "h-${group.section}") {
+                            Text(
+                                sectionTitle(group.section),
+                                style = AppleType.title3,
+                                color = Apple.colors.label,
+                                modifier = Modifier.animateItem().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp),
+                            )
+                        }
+                        items(group.items, key = { it.id }) { rec ->
+                            RecordingCard(
+                                rec, live, group.section,
+                                onClick = { onOpen(rec.id) },
+                                modifier = Modifier.animateItem().padding(horizontal = 16.dp, vertical = 5.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            GlassTopBar(
+                title = title,
+                collapsed = listState.collapseFraction(),
+                trailing = {
+                    GlassIconButton(Icons.Filled.FileDownload, stringResource(R.string.action_import), onImport, size = 40.dp, iconSize = 20.dp, tint = Apple.colors.tint)
                 },
             )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item { RecorderCard(live, onRecord, onPause, onResume, onStop) }
-            item {
-                TextButton(
-                    onClick = onImport,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.action_import))
-                }
-            }
-            
-            // Search bar
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.search_hint)) },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Search, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.action_clear))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                )
-            }
-            
-            // Filter chips
-            item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    FilterChip(
-                        selected = filter == "all",
-                        onClick = { filter = "all" },
-                        label = { Text(stringResource(R.string.filter_all)) },
-                    )
-                    FilterChip(
-                        selected = filter == "meetings",
-                        onClick = { filter = "meetings" },
-                        label = { Text(stringResource(R.string.filter_meetings)) },
-                    )
-                    FilterChip(
-                        selected = filter == "calls",
-                        onClick = { filter = "calls" },
-                        label = { Text(stringResource(R.string.filter_calls)) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Call,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                    )
-                }
-            }
-            
-            // Person filter dropdown
-            if (people.isNotEmpty()) {
-                item {
-                    PersonFilterDropdown(
-                        people = people,
-                        selectedPerson = selectedPerson,
-                        onSelectPerson = { selectedPerson = it },
-                    )
-                }
-            }
-            
-            if (!configured) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.home_not_configured))
-                            TextButton(onClick = onSettings) { Text(stringResource(R.string.action_open_settings)) }
-                        }
-                    }
-                }
-            }
-            if (filteredRecordings.isEmpty()) {
-                item {
-                    Text(
-                        if (searchQuery.isNotEmpty() || selectedPerson != null) {
-                            stringResource(R.string.search_no_results)
-                        } else {
-                            stringResource(R.string.home_empty)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
-                    )
-                }
-            }
-            items(filteredRecordings, key = { it.id }) { rec ->
-                RecordingRow(rec, live, onClick = { onOpen(rec.id) })
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PersonFilterDropdown(
-    people: List<String>,
-    selectedPerson: String?,
-    onSelectPerson: (String?) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-    ) {
-        OutlinedTextField(
-            value = selectedPerson ?: "",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(),
-            placeholder = { Text(stringResource(R.string.filter_by_person)) },
-            trailingIcon = {
-                Row {
-                    if (selectedPerson != null) {
-                        IconButton(onClick = { onSelectPerson(null) }) {
-                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.action_clear))
-                        }
-                    }
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            people.forEach { person ->
-                DropdownMenuItem(
-                    text = { Text(person) },
-                    onClick = {
-                        onSelectPerson(person)
-                        expanded = false
-                    },
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun RecorderCard(
-    live: LiveRecording,
-    onRecord: () -> Unit,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStop: () -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (!live.isActive) {
-                FilledIconButton(
-                    onClick = onRecord,
-                    modifier = Modifier.size(96.dp),
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) {
-                    Icon(Icons.Filled.Mic, contentDescription = stringResource(R.string.action_record), Modifier.size(48.dp))
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(stringResource(R.string.action_record), style = MaterialTheme.typography.titleMedium)
-            } else {
-                Text(
-                    stringResource(if (live.isPaused) R.string.recording_paused else R.string.recording_live),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (live.isPaused) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-                )
-                Text(formatDuration(live.elapsedMs), style = MaterialTheme.typography.displayMedium)
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { live.level },
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
-                )
-                Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    FilledIconButton(
-                        onClick = if (live.isPaused) onResume else onPause,
-                        modifier = Modifier.size(64.dp),
-                        shape = CircleShape,
-                    ) {
-                        if (live.isPaused) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.action_resume))
-                        } else {
-                            Icon(Icons.Filled.Pause, contentDescription = stringResource(R.string.action_pause))
-                        }
-                    }
-                    FilledIconButton(
-                        onClick = onStop,
-                        modifier = Modifier.size(64.dp),
-                        shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
-                    ) {
-                        Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.action_stop))
-                    }
-                }
-            }
-        }
-    }
+private fun sectionTitle(section: HomeLogic.Section): String = stringResource(
+    when (section) {
+        HomeLogic.Section.TODAY -> R.string.section_today
+        HomeLogic.Section.YESTERDAY -> R.string.section_yesterday
+        HomeLogic.Section.THIS_WEEK -> R.string.section_this_week
+        HomeLogic.Section.OLDER -> R.string.section_older
+    },
+)
+
+private fun timeLabel(ms: Long, section: HomeLogic.Section): String = when (section) {
+    HomeLogic.Section.TODAY, HomeLogic.Section.YESTERDAY -> DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(ms))
+    HomeLogic.Section.THIS_WEEK -> SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(ms))
+    HomeLogic.Section.OLDER -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(ms))
 }
 
 @Composable
-private fun RecordingRow(rec: Recording, live: LiveRecording, onClick: () -> Unit) {
+private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogic.Section, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Apple.colors
     val isLive = rec.id == live.recordingId
-    Card(modifier = Modifier.fillMaxWidth().clickable(enabled = !isLive, onClick = onClick)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (rec.isCall) {
-                Icon(
-                    Icons.Filled.Call,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp).padding(end = 8.dp),
-                )
-            }
-            Column(Modifier.weight(1f)) {
-                // Show display name (contact name or number for calls, title for meetings)
+    val source = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    val shape = RoundedCornerShape(22.dp)
+    val snippet = remember(rec.summary) { HomeLogic.summarySnippet(rec.summary) }
+    Row(
+        modifier
+            .fillMaxWidth()
+            .pressScale(source, 0.97f)
+            .glassCard(shape)
+            .clickable(source, indication = null, enabled = !isLive, role = Role.Button) { haptics.tap(); onClick() }
+            .padding(14.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Avatar(name = if (rec.isCall) rec.callContactName else null, isCall = rec.isCall)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     rec.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
+                    style = AppleType.headline.auto(rec.displayName),
+                    color = c.label,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
-                // For calls with contact name, show number as subtitle
+                Spacer(Modifier.width(8.dp))
+                Text(timeLabel(rec.createdAt, section), style = AppleType.footnote, color = c.secondaryLabel, maxLines = 1)
+            }
+            Spacer(Modifier.height(3.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (rec.isCall) Icons.Filled.Call else Icons.Filled.Groups,
+                    contentDescription = stringResource(if (rec.isCall) R.string.filter_calls else R.string.filter_meetings),
+                    tint = if (rec.isCall) c.green else c.tint,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    formatDuration(if (isLive) live.elapsedMs else rec.durationMs),
+                    style = AppleType.footnote.copy(fontFeatureSettings = "tnum"),
+                    color = c.secondaryLabel,
+                )
                 if (rec.isCall && rec.callContactName != null && rec.callNumber != null) {
+                    Text(" · ${rec.callNumber}", style = AppleType.footnote, color = c.secondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                }
+                if (isLive || rec.status != RecordingStatus.DONE) {
+                    Text(" · ", style = AppleType.footnote, color = c.secondaryLabel)
                     Text(
-                        rec.callNumber,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        statusLabel(rec.status),
+                        style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
+                        color = when {
+                            isLive -> c.red
+                            rec.status == RecordingStatus.FAILED || rec.status == RecordingStatus.INTERRUPTED -> c.red
+                            rec.status.isBusy -> c.orange
+                            else -> c.secondaryLabel
+                        },
                         maxLines = 1,
                     )
                 }
-                Text(
-                    "${formatDate(rec.createdAt)} · ${formatDuration(if (isLive) live.elapsedMs else rec.durationMs)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    statusLabel(rec.status),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = when (rec.status) {
-                        RecordingStatus.FAILED, RecordingStatus.INTERRUPTED -> MaterialTheme.colorScheme.error
-                        RecordingStatus.DONE -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-            if (rec.status.isBusy) {
-                Box(Modifier.padding(start = 12.dp)) {
-                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                if (rec.status.isBusy) {
+                    Spacer(Modifier.width(6.dp))
+                    CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = c.orange)
                 }
             }
+            if (snippet != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(snippet, style = AppleType.subheadline.auto(snippet), color = c.secondaryLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeopleRow(people: List<String>, selected: String?, onSelect: (String?) -> Unit) {
+    val c = Apple.colors
+    val haptics = rememberHaptics()
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(key = "__all") {
+            PersonBubble(stringResource(R.string.filter_everyone), selected == null, onClick = { haptics.selection(); onSelect(null) }) {
+                Box(Modifier.size(52.dp).clip(CircleShape).background(c.fill), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Groups, null, tint = c.tint, modifier = Modifier.size(26.dp))
+                }
+            }
+        }
+        items(people, key = { it }) { name ->
+            PersonBubble(name, selected == name, onClick = { haptics.selection(); onSelect(if (selected == name) null else name) }) {
+                Avatar(name, isCall = true, size = 52.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonBubble(label: String, selected: Boolean, onClick: () -> Unit, avatar: @Composable () -> Unit) {
+    val c = Apple.colors
+    Column(
+        Modifier.width(64.dp).clickable(remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(58.dp).then(if (selected) Modifier.border(2.dp, c.tint, CircleShape) else Modifier).padding(3.dp),
+            contentAlignment = Alignment.Center,
+        ) { avatar() }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label, style = AppleType.caption.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal),
+            color = if (selected) c.tint else c.label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun SetupCard(onSettings: () -> Unit) {
+    val c = Apple.colors
+    Column(
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().glassCard(RoundedCornerShape(22.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RowIcon(Icons.Filled.Key, c.orange)
+            Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.home_not_configured), style = AppleType.subheadline, color = c.label, modifier = Modifier.weight(1f))
+        }
+        CapsuleButton(stringResource(R.string.action_open_settings), onSettings, style = CapsuleStyle.Filled)
+    }
+}
+
+@Composable
+private fun EmptyState(searching: Boolean, onImport: () -> Unit) {
+    val c = Apple.colors
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 56.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(84.dp).glass(CircleShape, elevation = 8.dp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.GraphicEq, null, tint = c.tint, modifier = Modifier.size(40.dp))
+        }
+        Text(
+            stringResource(if (searching) R.string.search_no_results else R.string.home_empty_title),
+            style = AppleType.title3, color = c.label, textAlign = TextAlign.Center,
+        )
+        if (!searching) {
+            Text(stringResource(R.string.home_empty), style = AppleType.subheadline, color = c.secondaryLabel, textAlign = TextAlign.Center)
+            CapsuleButton(stringResource(R.string.action_import), onImport, icon = Icons.Filled.FileDownload)
         }
     }
 }

@@ -30,7 +30,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val callSettings = app.callRecordings.settings
     val transcriptionProviders = app.transcriptionProviders.settings
     
+    private val levelHistory = MutableStateFlow<List<Float>>(emptyList())
+    /** Recent input levels of the active recording, for the live waveform (survives navigation). */
+    val levels = levelHistory.asStateFlow()
+    private var levelsFor: String? = null
+
     init {
+        viewModelScope.launch {
+            live.collect { l ->
+                if (l.recordingId != levelsFor) {
+                    levelsFor = l.recordingId
+                    levelHistory.value = emptyList()
+                }
+                if (l.isActive) levelHistory.value = (levelHistory.value + if (l.isPaused) 0f else l.level).takeLast(LEVEL_HISTORY)
+            }
+        }
         // Backfill call participant info for existing recordings on app start
         viewModelScope.launch {
             backfillCallParticipants()
@@ -86,6 +100,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addBookmark(id: String, atMs: Long) {
+        viewModelScope.launch {
+            app.recordings.update(id) { it.copy(bookmarks = (it.bookmarks + atMs).distinct().sorted()) }
+        }
+    }
+
     fun delete(id: String) {
         viewModelScope.launch { app.recordings.delete(id) }
     }
@@ -134,5 +154,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             // Silently fail backfill - not critical
             android.util.Log.w("AppViewModel", "Call participant backfill failed", e)
         }
+    }
+
+    private companion object {
+        const val LEVEL_HISTORY = 240
     }
 }

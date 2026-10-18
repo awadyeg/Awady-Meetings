@@ -39,6 +39,8 @@ data class Recording(
     val callContactName: String? = null,
     /** ID of provider that transcribed this recording (null if not yet transcribed). */
     val transcribedBy: String? = null,
+    /** Bookmarks added while recording, as elapsed milliseconds from the start of the recording. */
+    val bookmarks: List<Long> = emptyList(),
 ) {
     val isCall: Boolean get() = "call" in tags
     

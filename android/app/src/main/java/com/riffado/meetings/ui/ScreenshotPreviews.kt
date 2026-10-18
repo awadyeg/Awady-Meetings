@@ -72,11 +72,7 @@ private fun PreviewHomeScreenWithFilters() {
                 recordings = sampleRecordings,
                 live = LiveRecording(),
                 configured = true,
-                onRecord = {},
                 onImport = {},
-                onPause = {},
-                onResume = {},
-                onStop = {},
                 onOpen = {},
                 onSettings = {},
             )
@@ -153,11 +149,7 @@ private fun PreviewHomeScreenCallsOnly() {
                 recordings = callRecordings,
                 live = LiveRecording(),
                 configured = true,
-                onRecord = {},
                 onImport = {},
-                onPause = {},
-                onResume = {},
-                onStop = {},
                 onOpen = {},
                 onSettings = {},
             )

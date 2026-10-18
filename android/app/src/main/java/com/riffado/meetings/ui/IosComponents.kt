@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -213,6 +215,7 @@ fun SearchField(
     placeholder: String,
     modifier: Modifier = Modifier,
     clearDescription: String? = null,
+    focusRequester: FocusRequester? = null,
 ) {
     val c = Apple.colors
     Row(
@@ -229,7 +232,7 @@ fun SearchField(
                 singleLine = true,
                 textStyle = AppleType.body.copy(color = c.label, textDirection = TextDirection.Content),
                 cursorBrush = SolidColor(c.tint),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             )
         }
         if (value.isNotEmpty()) {
