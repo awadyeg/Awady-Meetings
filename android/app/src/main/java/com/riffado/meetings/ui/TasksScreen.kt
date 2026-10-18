@@ -245,7 +245,7 @@ fun formatDue(task: TaskItem, locale: Locale = Locale.getDefault()): String? {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TaskRow(
+internal fun TaskRow(
     task: TaskItem,
     source: Recording?,
     overdue: Boolean,

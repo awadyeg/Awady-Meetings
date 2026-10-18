@@ -1,5 +1,8 @@
 package com.riffado.meetings
 
+import com.riffado.meetings.ui.PersonScreen
+import com.riffado.meetings.ui.PersonLogic
+import androidx.compose.runtime.mutableStateMapOf
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -91,6 +94,8 @@ class MainActivity : ComponentActivity() {
 private const val PROVIDER_MANAGEMENT = "provider_management"
 private const val ASK = "ask"
 private const val ASK_PREFIX = "ask:"
+private const val PERSON_PREFIX = "person:"
+private const val ASK_PERSON_PREFIX = "ask-person:"
 
 @Composable
 private fun App(viewModel: AppViewModel, intent: Intent) {
@@ -102,6 +107,10 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
     var tab by rememberSaveable { mutableStateOf(AppTab.Home) }
     /** Pushed screen on top of the tabs: a recording id or [PROVIDER_MANAGEMENT]. */
     var screen by rememberSaveable { mutableStateOf<String?>(null) }
+    // Where "back" goes from a pushed screen opened from another pushed screen (person page → recording → back).
+    val returnTo = remember { mutableStateMapOf<String, String>() }
+    val push = { target: String -> screen?.let { returnTo[target] = it }; screen = target }
+    val pop = { screen = screen?.let { returnTo.remove(it) } }
     var showRecorder by rememberSaveable { mutableStateOf(false) }
     var searchTrigger by rememberSaveable { mutableIntStateOf(0) }
     val haptics = rememberHaptics()
@@ -185,7 +194,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
     BackHandler(enabled = showRecorder || screen != null || tab != AppTab.Home) {
         when {
             showRecorder -> showRecorder = false
-            screen != null -> screen = null
+            screen != null -> pop()
             else -> tab = AppTab.Home
         }
     }
@@ -205,6 +214,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                     onSettings = { tab = AppTab.Settings },
                     focusSearch = searchTrigger,
                     onAsk = { screen = ASK },
+                    onOpenPerson = { screen = PERSON_PREFIX + it },
                 )
                 AppTab.Tasks -> {
                     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
@@ -283,7 +293,27 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                         onBack = { screen = null },
                     )
                 }
-                else -> if (current.startsWith(ASK_PREFIX)) {
+                else -> if (current.startsWith(PERSON_PREFIX)) {
+                    val name = current.removePrefix(PERSON_PREFIX)
+                    val person = remember(recordings, name) { PersonLogic.summary(name, recordings) }
+                    val allTasks by viewModel.tasks.collectAsStateWithLifecycle()
+                    PersonScreen(
+                        person = person,
+                        tasks = remember(person, allTasks) { PersonLogic.openTasks(person, allTasks) },
+                        live = live,
+                        onBack = { pop() },
+                        onOpen = { push(it) },
+                        onAsk = { push(ASK_PERSON_PREFIX + name) },
+                        onToggleTask = { task, done -> viewModel.setTaskDone(task.id, done) },
+                        onAddToCalendar = { task -> TaskCalendar.add(context, task, recordings.firstOrNull { it.id == task.recordingId }?.displayName) },
+                    )
+                } else if (current.startsWith(ASK_PERSON_PREFIX)) {
+                    val name = current.removePrefix(ASK_PERSON_PREFIX)
+                    AskAiRoute(
+                        askViewModel, AskAiViewModel.PERSON_PREFIX + name, null, personName = name,
+                        onOpen = { push(it) }, onBack = { pop() },
+                    )
+                } else if (current.startsWith(ASK_PREFIX)) {
                     val id = current.removePrefix(ASK_PREFIX)
                     AskAiRoute(
                         askViewModel, id, recordings.firstOrNull { it.id == id }?.title,
@@ -298,7 +328,8 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                             recording = recording,
                             segmentPaths = viewModel.segmentPaths(recording.id),
                             canProcess = settings.canTranscribe,
-                            onBack = { screen = null },
+                            onBack = { pop() },
+                            onOpenPerson = { push(PERSON_PREFIX + it) },
                             onProcess = { summaryOnly -> viewModel.process(recording.id, summaryOnly) },
                             onRename = { viewModel.rename(recording.id, it) },
                             detectingSpeakers = recording.id in viewModel.detectingSpeakers.collectAsStateWithLifecycle().value,
@@ -408,11 +439,14 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
 }
 
 @Composable
-private fun AskAiRoute(vm: AskAiViewModel, scope: String?, scopeTitle: String?, onOpen: (String) -> Unit, onBack: () -> Unit) {
+private fun AskAiRoute(
+    vm: AskAiViewModel, scope: String?, scopeTitle: String?, onOpen: (String) -> Unit, onBack: () -> Unit, personName: String? = null,
+) {
     val conversation by vm.conversation(scope).collectAsStateWithLifecycle()
     AskAiScreen(
         conversation = conversation,
         scopeTitle = scopeTitle,
+        personName = personName,
         onAsk = { vm.ask(scope, it) },
         onRetry = { vm.retry(scope) },
         onClear = { vm.clear(scope) },

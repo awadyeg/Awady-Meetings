@@ -3,6 +3,7 @@ package com.riffado.meetings.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,6 +90,7 @@ fun HomeScreen(
     onSettings: () -> Unit,
     focusSearch: Int = 0,
     onAsk: () -> Unit = {},
+    onOpenPerson: (String) -> Unit = {},
     bottomInset: androidx.compose.ui.unit.Dp = 140.dp,
 ) {
     var filter by rememberSaveable { mutableIntStateOf(0) } // 0 all, 1 meetings, 2 calls
@@ -145,7 +147,12 @@ fun HomeScreen(
                         )
                     }
                     if (people.isNotEmpty()) {
-                        item(key = "people") { PeopleRow(people, selectedPerson) { selectedPerson = it } }
+                        item(key = "people") { PeopleRow(people, selectedPerson, onLongPress = onOpenPerson) { selectedPerson = it } }
+                    }
+                    selectedPerson?.let { person ->
+                        item(key = "profile") {
+                            ProfileEntry(person, { onOpenPerson(person) }, Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                        }
                     }
                     if (!configured) {
                         item(key = "setup") { SetupCard(onSettings) }
@@ -167,6 +174,7 @@ fun HomeScreen(
                                 rec, live, group.section,
                                 onClick = { onOpen(rec.id) },
                                 modifier = Modifier.animateItem().padding(horizontal = 16.dp, vertical = 5.dp),
+                                onAvatar = rec.callContactName?.takeIf { rec.isCall && it.isNotBlank() }?.let { name -> { onOpenPerson(name) } },
                             )
                         }
                     }
@@ -201,7 +209,7 @@ private fun timeLabel(ms: Long, section: HomeLogic.Section): String = when (sect
 }
 
 @Composable
-private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogic.Section, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogic.Section, onClick: () -> Unit, modifier: Modifier = Modifier, onAvatar: (() -> Unit)? = null) {
     val c = Apple.colors
     val isLive = rec.id == live.recordingId
     val source = remember { MutableInteractionSource() }
@@ -217,7 +225,10 @@ private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogi
             .padding(14.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Avatar(name = if (rec.isCall) rec.callContactName else null, isCall = rec.isCall)
+        Avatar(
+            name = if (rec.isCall) rec.callContactName else null, isCall = rec.isCall,
+            modifier = if (onAvatar != null) Modifier.clip(CircleShape).clickable(role = Role.Button, onClickLabel = stringResource(R.string.person_open)) { haptics.tap(); onAvatar() } else Modifier,
+        )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -278,7 +289,7 @@ private fun RecordingCard(rec: Recording, live: LiveRecording, section: HomeLogi
 }
 
 @Composable
-private fun PeopleRow(people: List<String>, selected: String?, onSelect: (String?) -> Unit) {
+private fun PeopleRow(people: List<String>, selected: String?, onLongPress: (String) -> Unit, onSelect: (String?) -> Unit) {
     val c = Apple.colors
     val haptics = rememberHaptics()
     LazyRow(
@@ -293,18 +304,27 @@ private fun PeopleRow(people: List<String>, selected: String?, onSelect: (String
             }
         }
         items(people, key = { it }) { name ->
-            PersonBubble(name, selected == name, onClick = { haptics.selection(); onSelect(if (selected == name) null else name) }) {
+            PersonBubble(
+                name, selected == name,
+                onClick = { haptics.selection(); onSelect(if (selected == name) null else name) },
+                onLongClick = { haptics.heavy(); onLongPress(name) },
+            ) {
                 Avatar(name, isCall = true, size = 52.dp)
             }
         }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun PersonBubble(label: String, selected: Boolean, onClick: () -> Unit, avatar: @Composable () -> Unit) {
+private fun PersonBubble(label: String, selected: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, avatar: @Composable () -> Unit) {
     val c = Apple.colors
     Column(
-        Modifier.width(64.dp).clickable(remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton, onClick = onClick),
+        Modifier.width(64.dp).combinedClickable(
+            remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton,
+            onLongClickLabel = if (onLongClick != null) stringResource(R.string.person_open) else null,
+            onLongClick = onLongClick, onClick = onClick,
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -354,6 +374,27 @@ private fun EmptyState(searching: Boolean, onImport: () -> Unit) {
             Text(stringResource(R.string.home_empty), style = AppleType.subheadline, color = c.secondaryLabel, textAlign = TextAlign.Center)
             CapsuleButton(stringResource(R.string.action_import), onImport, icon = Icons.Filled.FileDownload)
         }
+    }
+}
+
+/** Glass row under the people strip: "View Sara's page ›". */
+@Composable
+private fun ProfileEntry(name: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Apple.colors
+    val source = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    val label = stringResource(R.string.person_view, name)
+    Row(
+        modifier.fillMaxWidth().height(48.dp).pressScale(source, 0.97f)
+            .glass(RoundedCornerShape(24.dp), elevation = 4.dp)
+            .clickable(source, indication = null, role = Role.Button) { haptics.tap(); onClick() }
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(name, isCall = true, size = 32.dp)
+        Spacer(Modifier.width(10.dp))
+        Text(label, style = AppleType.body.auto(label), color = c.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.tertiaryLabel, modifier = Modifier.size(20.dp))
     }
 }
 

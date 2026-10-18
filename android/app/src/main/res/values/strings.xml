@@ -282,4 +282,28 @@
     <string name="settings_notion_page">Parent page (URL or ID)</string>
     <string name="settings_notion_page_invalid">That doesn’t look like a Notion page link or ID.</string>
     <string name="settings_notion_help">Create an internal integration at notion.so/my-integrations, copy its token, then share the parent page with it (⋯ → Connections). “Send to Notion” creates a sub-page there.</string>
+    <string name="person_open">Open person page</string>
+    <string name="person_view">View %1$s’s page</string>
+    <string name="person_call">Call</string>
+    <string name="person_total_time">Total time</string>
+    <string name="person_ask">Ask AI about %1$s</string>
+    <string name="person_open_tasks_n">Open tasks (%1$d)</string>
+    <string name="person_recordings_n">Recordings (%1$d)</string>
+    <string name="person_no_recordings">No recordings with this person yet.</string>
+    <string name="ask_scope_person">Asking about %1$s across all your recordings with them</string>
+    <string name="ask_hint_person">Ask about %1$s…</string>
+    <string name="ask_suggest_person_1">What do I owe them?</string>
+    <string name="ask_suggest_person_2">Summarize our last calls</string>
+    <string name="ask_suggest_person_3">What did they ask for?</string>
+    <plurals name="person_calls">
+        <item quantity="one">call</item>
+        <item quantity="other">calls</item>
+    </plurals>
+    <plurals name="person_meetings">
+        <item quantity="one">meeting</item>
+        <item quantity="other">meetings</item>
+    </plurals>
+    <string name="unit_hour_short">h</string>
+    <string name="unit_minute_short">m</string>
+    <string name="unit_second_short">s</string>
 </resources>

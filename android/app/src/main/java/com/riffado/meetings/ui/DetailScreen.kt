@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
@@ -150,7 +151,7 @@ fun DetailScreen(
                 AmbientBackdrop(accent = if (recording.isCall) c.green else c.tint)
                 Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(top = topPad, bottom = if (player != null) 210.dp else 48.dp)) {
                     LargeTitle(recording.title)
-                    MetaLine(recording)
+                    MetaLine(recording, onOpenPerson)
                     Spacer(Modifier.height(14.dp))
 
                     if (recording.status.isBusy) {
@@ -355,11 +356,23 @@ fun DetailScreen(
 }
 
 @Composable
-private fun MetaLine(recording: Recording) {
+private fun MetaLine(recording: Recording, onOpenPerson: ((String) -> Unit)?) {
     val c = Apple.colors
     Column(Modifier.padding(horizontal = 20.dp)) {
         val who = if (recording.isCall) listOfNotNull(recording.callContactName, recording.callNumber?.let(::ltrIsolate)).joinToString(" · ") else null
-        if (!who.isNullOrBlank() && who != recording.title && who != recording.callNumber?.let(::ltrIsolate)) {
+        val contact = recording.callContactName?.takeIf { recording.isCall && it.isNotBlank() }
+        if (contact != null && onOpenPerson != null) {
+            Row(
+                Modifier.clip(CircleShape).clickable(role = Role.Button, onClickLabel = stringResource(R.string.person_open)) { onOpenPerson(contact) }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(contact, isCall = true, size = 22.dp)
+                Spacer(Modifier.width(6.dp))
+                Text(who.orEmpty(), style = AppleType.subheadline.auto(contact), color = c.tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.tint, modifier = Modifier.size(16.dp))
+            }
+        } else if (!who.isNullOrBlank() && who != recording.title && who != recording.callNumber?.let(::ltrIsolate)) {
             Text(who, style = AppleType.subheadline.auto(who), color = c.label)
         }
         Text(

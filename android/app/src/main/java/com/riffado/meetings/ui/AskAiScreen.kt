@@ -81,6 +81,7 @@ fun AskAiScreen(
     conversation: Conversation,
     scopeTitle: String?,
     onAsk: (String) -> Unit,
+    personName: String? = null,
     onRetry: () -> Unit,
     onClear: () -> Unit,
     onOpenRecording: (String) -> Unit,
@@ -113,7 +114,7 @@ fun AskAiScreen(
                     contentPadding = PaddingValues(top = topPad, bottom = 120.dp, start = 16.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    item(key = "header") { AskHeader(scopeTitle, conversation.entries.isEmpty(), onAsk) }
+                    item(key = "header") { AskHeader(scopeTitle, personName, conversation.entries.isEmpty(), onAsk) }
                     itemsIndexed(conversation.entries) { i, entry ->
                         val isLast = i == conversation.entries.lastIndex
                         if (entry.fromUser) UserBubble(entry.text)
@@ -146,7 +147,11 @@ fun AskAiScreen(
                 Box(Modifier.weight(1f).heightIn(min = 40.dp).padding(vertical = 9.dp)) {
                     if (input.isEmpty()) {
                         Text(
-                            stringResource(if (scopeTitle != null) R.string.ask_hint_recording else R.string.ask_hint_global),
+                            when {
+                                personName != null -> stringResource(R.string.ask_hint_person, personName)
+                                scopeTitle != null -> stringResource(R.string.ask_hint_recording)
+                                else -> stringResource(R.string.ask_hint_global)
+                            },
                             style = AppleType.body, color = c.secondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -177,7 +182,7 @@ fun AskAiScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AskHeader(scopeTitle: String?, empty: Boolean, onAsk: (String) -> Unit) {
+private fun AskHeader(scopeTitle: String?, personName: String?, empty: Boolean, onAsk: (String) -> Unit) {
     val c = Apple.colors
     Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -187,14 +192,18 @@ private fun AskHeader(scopeTitle: String?, empty: Boolean, onAsk: (String) -> Un
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(34.dp)) }
         Spacer(Modifier.size(12.dp))
-        val subtitle = if (scopeTitle != null) stringResource(R.string.ask_scope_recording, scopeTitle) else stringResource(R.string.ask_scope_global)
+        val subtitle = when {
+            personName != null -> stringResource(R.string.ask_scope_person, personName)
+            scopeTitle != null -> stringResource(R.string.ask_scope_recording, scopeTitle)
+            else -> stringResource(R.string.ask_scope_global)
+        }
         Text(subtitle, style = AppleType.subheadline, color = c.secondaryLabel, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
         if (empty) {
             Spacer(Modifier.size(18.dp))
-            val suggestions = if (scopeTitle != null) {
-                listOf(R.string.ask_suggest_rec_1, R.string.ask_suggest_rec_2, R.string.ask_suggest_rec_3)
-            } else {
-                listOf(R.string.ask_suggest_1, R.string.ask_suggest_2, R.string.ask_suggest_3, R.string.ask_suggest_4)
+            val suggestions = when {
+                personName != null -> listOf(R.string.ask_suggest_person_1, R.string.ask_suggest_person_2, R.string.ask_suggest_person_3)
+                scopeTitle != null -> listOf(R.string.ask_suggest_rec_1, R.string.ask_suggest_rec_2, R.string.ask_suggest_rec_3)
+                else -> listOf(R.string.ask_suggest_1, R.string.ask_suggest_2, R.string.ask_suggest_3, R.string.ask_suggest_4)
             }.map { stringResource(it) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 suggestions.forEach { s -> CapsuleButton(s, { onAsk(s) }, style = CapsuleStyle.Glass) }

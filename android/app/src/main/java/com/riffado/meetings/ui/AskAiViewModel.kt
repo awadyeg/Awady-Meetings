@@ -78,12 +78,15 @@ class AskAiViewModel(application: Application) : AndroidViewModel(application) {
         if (!settings.canSummarize) {
             return ChatEntry(false, app.getString(R.string.ask_not_configured), isError = true)
         }
-        val recordings = app.recordings.recordings.value.filter { !it.summary.isNullOrBlank() || !it.transcript.isNullOrBlank() }
+        val usable = app.recordings.recordings.value.filter { !it.summary.isNullOrBlank() || !it.transcript.isNullOrBlank() }
+        val person = scope?.takeIf { it.startsWith(PERSON_PREFIX) }?.removePrefix(PERSON_PREFIX)
+        val recordings = if (person != null) RecordingSearch.filterByPerson(usable, person) else usable
+        val recordingScope = if (person != null) null else scope
         if (recordings.isEmpty()) return ChatEntry(false, app.getString(R.string.ask_no_recordings), isError = true)
         val today = SimpleDateFormat("EEEE d MMMM yyyy", Locale.US).format(Date())
         var budget = AskAi.DEFAULT_TOKEN_BUDGET
         while (true) {
-            val context = AskAi.buildContext(recordings, question, tokenBudget = budget, scopedTo = scope)
+            val context = AskAi.buildContext(recordings, question, tokenBudget = budget, scopedTo = recordingScope)
             val messages = AskAi.messages(context, question, history, today)
             try {
                 val text = withContext(Dispatchers.IO) { OpenAiClient.chat(settings.effectiveSummary, messages) }
@@ -97,8 +100,10 @@ class AskAiViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private companion object {
-        const val TAG = "AskAi"
-        const val MIN_BUDGET = 1_500
+    companion object {
+        /** Scope prefix for "Ask AI about this person": `person:<name>` limits retrieval to their recordings. */
+        const val PERSON_PREFIX = "person:"
+        private const val TAG = "AskAi"
+        private const val MIN_BUDGET = 1_500
     }
 }

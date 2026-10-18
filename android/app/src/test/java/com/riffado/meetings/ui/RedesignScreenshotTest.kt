@@ -41,6 +41,8 @@ class RedesignScreenshotTest {
     @Test fun commentEditorLight() = shot("comment_editor_light", false) { PreviewComments(editLine = 3) }
     @Test fun exportSheetLight() = shot("export_sheet_light", false) { PreviewExportSheet() }
     @Test fun exportSheetDark() = shot("export_sheet_dark", true) { PreviewExportSheet(busy = com.riffado.meetings.export.ExportKind.NOTION) }
+    @Test fun personLight() = shot("person_light", false) { PreviewPerson() }
+    @Test fun personDark() = shot("person_dark", true) { PreviewPerson() }
     @Test fun askAiLight() = shot("ask_ai_light", false) { PreviewAskAi() }
     @Test fun askAiEmptyDark() = shot("ask_ai_empty_dark", true) { PreviewAskAi(empty = true) }
 
@@ -52,6 +54,9 @@ class RedesignScreenshotTest {
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun commentsArabicRtl() = shot("comments_ar_rtl", false) { PreviewComments(editLine = 1) }
+
+    @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
+    @Test fun personArabicRtl() = shot("person_ar_rtl", false) { PreviewPerson("أحمد حسن") }
 
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun exportSheetArabic() = shot("export_sheet_ar_rtl", false) { PreviewExportSheet(notionConfigured = false) }

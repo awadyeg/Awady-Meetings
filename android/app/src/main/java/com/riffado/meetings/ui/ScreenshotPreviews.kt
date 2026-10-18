@@ -74,6 +74,35 @@ object PreviewData {
         TaskItem("t7", "1", "Book the demo room", dueAt = today - 2 * D, done = true, createdAt = now - H),
     )
 
+    /** Extra recordings so the person page has calls and meetings to show. */
+    val personRecordings = recordings + listOf(
+        Recording(
+            id = "p1", title = "Sara Ali", createdAt = now - 50 * H, durationMs = 540_000, status = RecordingStatus.DONE,
+            segments = listOf("p1-0.m4a"), tags = setOf("call"), callContactName = "Sara Ali", callNumber = "+971 55 222 3344",
+            summary = "## Summary\nSara confirmed the contract terms; she will send the signed copy by Thursday.",
+        ),
+        Recording(
+            id = "p2", title = "Design review with Sara", createdAt = now - 120 * H, durationMs = 2_280_000, status = RecordingStatus.DONE,
+            segments = listOf("p2-0.m4a"), speakerNames = mapOf("1" to "Mohamed", "2" to "Sara Ali"),
+            summary = "## Summary\nWalked through the Liquid Glass screens; agreed on the person page layout.",
+        ),
+        Recording(
+            id = "p3", title = "أحمد حسن", createdAt = now - 70 * H, durationMs = 410_000, status = RecordingStatus.DONE,
+            segments = listOf("p3-0.m4a"), tags = setOf("call"), callContactName = "أحمد حسن", callNumber = "+20 100 123 4567",
+            summary = "## الملخص\nراجعنا خطة الإطلاق واتفقنا على موعد العرض للعميل.",
+        ),
+        Recording(
+            id = "p4", title = "اجتماع فريق التطوير", createdAt = now - 200 * H, durationMs = 1_960_000, status = RecordingStatus.DONE,
+            segments = listOf("p4-0.m4a"), speakerNames = mapOf("1" to "محمد", "2" to "أحمد حسن"),
+            summary = "## الملخص\nتوزيع مهام الإصدار الثاني ومراجعة الأخطاء المفتوحة.",
+        ),
+    )
+    val personTasks = tasks + listOf(
+        TaskItem("pt1", "p1", "Send the signed contract", assignee = "Sara Ali", dueAt = today + 3 * D, dueText = "by Thursday", createdAt = now - 50 * H),
+        TaskItem("pt2", "p2", "Share the person page mock-ups", dueAt = today + D, createdAt = now - 120 * H),
+        TaskItem("pt3", "p3", "تجهيز العرض للعميل", assignee = "أحمد حسن", dueAt = today + 2 * D, createdAt = now - 70 * H),
+    )
+
     val askConversation = Conversation(
         entries = listOf(
             ChatEntry(true, "What did we agree on the beta release?"),
@@ -155,6 +184,15 @@ fun PreviewExportSheet(busy: com.riffado.meetings.export.ExportKind? = null, not
         recording = PreviewData.commented, segmentPaths = emptyList(), canProcess = true,
         onBack = {}, onProcess = {}, onRename = {}, onRenameSpeaker = { _, _ -> }, onDelete = {},
         previewExportSheet = true, exporting = busy, notionConfigured = notionConfigured,
+    )
+}
+
+@Composable
+fun PreviewPerson(name: String = "Sara Ali") {
+    val person = PersonLogic.summary(name, PreviewData.personRecordings)
+    PersonScreen(
+        person = person, tasks = PersonLogic.openTasks(person, PreviewData.personTasks), live = LiveRecording(),
+        onBack = {}, onOpen = {}, onAsk = {}, onToggleTask = { _, _ -> }, onAddToCalendar = {}, now = PreviewData.now,
     )
 }
 

@@ -298,4 +298,36 @@
     <string name="settings_notion_page">الصفحة الرئيسية (رابط أو ID)</string>
     <string name="settings_notion_page_invalid">ده مش شكل رابط أو ID لصفحة Notion.</string>
     <string name="settings_notion_help">اعمل internal integration من notion.so/my-integrations وانسخ التوكن، وبعدين شارك الصفحة الرئيسية معاها (⋯ ← Connections). «إرسال إلى Notion» بيعمل صفحة فرعية هناك.</string>
+    <string name="person_open">فتح صفحة الشخص</string>
+    <string name="person_view">عرض صفحة %1$s</string>
+    <string name="person_call">اتصال</string>
+    <string name="person_total_time">المدة الإجمالية</string>
+    <string name="person_ask">اسأل الذكاء الاصطناعي عن %1$s</string>
+    <string name="person_open_tasks_n">مهام مفتوحة (%1$d)</string>
+    <string name="person_recordings_n">التسجيلات (%1$d)</string>
+    <string name="person_no_recordings">لا توجد تسجيلات مع هذا الشخص بعد.</string>
+    <string name="ask_scope_person">السؤال عن %1$s في كل تسجيلاتك معه</string>
+    <string name="ask_hint_person">اسأل عن %1$s…</string>
+    <string name="ask_suggest_person_1">ما المطلوب مني تجاهه؟</string>
+    <string name="ask_suggest_person_2">لخّص آخر مكالماتنا</string>
+    <string name="ask_suggest_person_3">ماذا طلب مني؟</string>
+    <plurals name="person_calls">
+        <item quantity="zero">مكالمات</item>
+        <item quantity="one">مكالمة</item>
+        <item quantity="two">مكالمتان</item>
+        <item quantity="few">مكالمات</item>
+        <item quantity="many">مكالمة</item>
+        <item quantity="other">مكالمة</item>
+    </plurals>
+    <plurals name="person_meetings">
+        <item quantity="zero">اجتماعات</item>
+        <item quantity="one">اجتماع</item>
+        <item quantity="two">اجتماعان</item>
+        <item quantity="few">اجتماعات</item>
+        <item quantity="many">اجتماعًا</item>
+        <item quantity="other">اجتماع</item>
+    </plurals>
+    <string name="unit_hour_short">س</string>
+    <string name="unit_minute_short">د</string>
+    <string name="unit_second_short">ث</string>
 </resources>

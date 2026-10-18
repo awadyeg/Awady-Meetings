@@ -61,7 +61,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 2 Tasks + dates extraction + calendar** | done — unit-tested parsing/grouping; NOT tested against a live provider or a real calendar app |
 | **Phase 3 Comments on transcript lines** | done — unit + persistence tests; NOT device-tested |
 | **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | done — unit tests for Markdown / share text / Notion payloads, PDF layout rendered in tests; NOT tested against the live Notion API or on a device |
-| **Phase 3 Person page** | todo |
+| **Phase 3 Person page** | done — `PersonLogicTest`, screenshots; NOT device-tested |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -105,6 +105,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | `data/Comments.kt` — `LineComment` (line index + quote + speaker + timestamp), stored in `Recording.comments` (recordings.json, backward compatible); `Comments.lines` (the exact lines the transcript view shows), `upsert` (add / edit / blank = delete, one note per line), `anchor` (re-anchors by quote after re-transcription, else "orphan"); `CommentsTest` (6 tests incl. RecordingStore round-trip via Robolectric and Ask AI context) | done |
 | Detail transcript: long-press a line → glass bottom sheet editor (`CommentViews.kt`: quote, text, Save / Cancel / Delete; ar strings); notes shown inline under the line as glass note bubbles (tap to edit); orphaned notes listed at the end | done |
 | Ask AI: notes are a separate retrieval passage per recording (`AskAi.notesText`), always included for per-recording chats | done |
+| Person page (`PersonScreen.kt`, `PersonLogic.kt`): avatar, name, phone pill (taps open the dialer, `ACTION_DIAL`, no permission), glass stat tiles (calls · meetings · total time, Arabic plurals and units), "Ask AI about <name>" (scope `person:<name>` → retrieval limited to their recordings), open tasks (from their recordings or assigned to them by exact/normalised name), all recordings with them. A person is a call contact name or a renamed speaker, matched like the Home person filter (Arabic-normalised, case-insensitive); phone = their most frequent call number. Entry points: long-press an avatar in the Home people strip, the "View <name>’s page" row shown while a person filter is active, the avatar on a call card, and the contact line on a call's detail page. Back from a recording or chat opened on the person page returns to it. `PersonLogicTest` (5 tests) | done |
 | `export/RecordingExport.kt` — Markdown (title, date, duration, people, summary, tasks as checkboxes, bookmarks, notes, transcript with names + inline notes) and WhatsApp text (summary without markdown + tasks); localised headings via `ExportLabels`; tasks = extracted tasks, else `- [ ]` lines from the minutes; `RecordingExportTest` (7 tests) | done |
 | `export/PdfExporter.kt` — A4 PDF via `PdfDocument` + `StaticLayout` (Arabic shaping, per-paragraph bidi so Arabic lines are right-aligned, phone numbers LTR-isolated), pagination line by line, page footer; drawing goes through a `PageSink` so `PdfExporterTest` renders pages to PNG under Robolectric (sample: `docs/screenshots/export_pdf_page1.png`) | done |
 | `export/NotionExport.kt` + `NotionClient.kt` — page payload (meta paragraph, summary → headings / bullets / paragraphs, tasks → `to_do` with checked state, notes → quote + paragraph, transcript paragraphs with bold speaker), 2000-char rich-text chunks, first 100 blocks on create then `PATCH /blocks/{id}/children` in batches of 100, 429 retry with Retry-After, errors mapped to friendly messages (bad token / page not shared with integration / rate limit / network), partial-page URL kept; parent page accepts URL or id; `NotionExportTest` (6 tests) | done |
@@ -119,6 +120,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 (Bookmarks during recording shipped in Phase 1.)
 
 ## Known issues / notes
+- Person matching is by name only. A task assigned to "Sara" doesn't show on "Sara Ali"'s page unless it comes from one of her recordings. Two contacts with the same name are merged.
 - Notion export is untested against the real API (no token here). Very long transcripts become many blocks (one per line) and several append requests. If an append fails the page exists but is incomplete; the dialog then offers to open it.
 - PDF uses the system sans-serif font; Arabic rendering depends on the device's Arabic font (Samsung/Google ship Noto). The PDF layout was checked via Robolectric bitmap rendering, not a real `PdfDocument`.
 - The transcript is no longer wrapped in a `SelectionContainer` (long-press is now "add note"), so text can't be selected/copied there; use Share / Export instead.
@@ -146,6 +148,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 3. Fix device findings (bump `versionCode` for each release), then Phase 3 (bookmarks + comments).
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 3 item 3 — person page (stats, tasks, recordings, Ask AI scoped to the person), entry points from Home and Detail, screenshots `person_*`.
 - 2026-10-18: Phase 3 item 2 — export & share: PDF, Markdown, WhatsApp, Send to Notion (+ Settings), tests, screenshots `export_*`.
 - 2026-10-18: Phase 3 item 1 — notes on transcript lines (long-press editor, inline glass notes, persisted, in Ask AI context), tests, screenshots `comment*`.
 - 2026-10-18: Phase 2 verified (build + lint + 74 tests), APK `riffado-v2-phase2.apk`.
