@@ -85,5 +85,6 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.haze)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
