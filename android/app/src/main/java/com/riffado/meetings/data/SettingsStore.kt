@@ -18,7 +18,13 @@ data class AppSettings(
     val summary: ProviderConfig,
     val language: String,
     val autoProcess: Boolean,
+    /** Notion internal integration token (encrypted at rest) and the parent page (URL or id). */
+    val notionToken: String = "",
+    val notionParentPage: String = "",
 ) {
+    val canNotion: Boolean
+        get() = notionToken.isNotBlank() && com.riffado.meetings.export.NotionExport.parentPageId(notionParentPage) != null
+
     val canTranscribe: Boolean
         get() = transcription.baseUrl.isNotBlank() && transcription.model.isNotBlank() &&
             (transcription.apiKey.isNotBlank() || isLocal(transcription.baseUrl))
@@ -70,6 +76,8 @@ class SettingsStore(context: Context) {
             putString(K_SUM_MODEL, value.summary.model.trim())
             putString(K_LANG, value.language.trim())
             putBoolean(K_AUTO, value.autoProcess)
+            putString(K_NOTION_TOKEN, KeystoreCipher.encrypt(value.notionToken.trim()))
+            putString(K_NOTION_PAGE, value.notionParentPage.trim())
         }
         state.value = read()
     }
@@ -87,6 +95,8 @@ class SettingsStore(context: Context) {
         ),
         language = prefs.getString(K_LANG, "") ?: "",
         autoProcess = prefs.getBoolean(K_AUTO, true),
+        notionToken = KeystoreCipher.decrypt(prefs.getString(K_NOTION_TOKEN, "") ?: ""),
+        notionParentPage = prefs.getString(K_NOTION_PAGE, "") ?: "",
     )
 
     companion object {
@@ -119,5 +129,7 @@ class SettingsStore(context: Context) {
         private const val K_SUM_MODEL = "sum_model"
         private const val K_LANG = "language"
         private const val K_AUTO = "auto_process"
+        private const val K_NOTION_TOKEN = "notion_token"
+        private const val K_NOTION_PAGE = "notion_parent_page"
     }
 }

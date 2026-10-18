@@ -150,6 +150,15 @@ fun PreviewComments(editLine: Int? = null) {
 }
 
 @Composable
+fun PreviewExportSheet(busy: com.riffado.meetings.export.ExportKind? = null, notionConfigured: Boolean = true) {
+    DetailScreen(
+        recording = PreviewData.commented, segmentPaths = emptyList(), canProcess = true,
+        onBack = {}, onProcess = {}, onRename = {}, onRenameSpeaker = { _, _ -> }, onDelete = {},
+        previewExportSheet = true, exporting = busy, notionConfigured = notionConfigured,
+    )
+}
+
+@Composable
 fun PreviewTasks() {
     Box(Modifier.fillMaxSize()) {
         TasksScreen(

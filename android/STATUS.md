@@ -60,7 +60,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 2 Ask AI** (global + per-recording chat with cited, tappable sources) | done — unit-tested retrieval; NOT tested against a live provider |
 | **Phase 2 Tasks + dates extraction + calendar** | done — unit-tested parsing/grouping; NOT tested against a live provider or a real calendar app |
 | **Phase 3 Comments on transcript lines** | done — unit + persistence tests; NOT device-tested |
-| **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | todo |
+| **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | done — unit tests for Markdown / share text / Notion payloads, PDF layout rendered in tests; NOT tested against the live Notion API or on a device |
 | **Phase 3 Person page** | todo |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
@@ -105,7 +105,11 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | `data/Comments.kt` — `LineComment` (line index + quote + speaker + timestamp), stored in `Recording.comments` (recordings.json, backward compatible); `Comments.lines` (the exact lines the transcript view shows), `upsert` (add / edit / blank = delete, one note per line), `anchor` (re-anchors by quote after re-transcription, else "orphan"); `CommentsTest` (6 tests incl. RecordingStore round-trip via Robolectric and Ask AI context) | done |
 | Detail transcript: long-press a line → glass bottom sheet editor (`CommentViews.kt`: quote, text, Save / Cancel / Delete; ar strings); notes shown inline under the line as glass note bubbles (tap to edit); orphaned notes listed at the end | done |
 | Ask AI: notes are a separate retrieval passage per recording (`AskAi.notesText`), always included for per-recording chats | done |
-| Exports include notes | todo (item 2) |
+| `export/RecordingExport.kt` — Markdown (title, date, duration, people, summary, tasks as checkboxes, bookmarks, notes, transcript with names + inline notes) and WhatsApp text (summary without markdown + tasks); localised headings via `ExportLabels`; tasks = extracted tasks, else `- [ ]` lines from the minutes; `RecordingExportTest` (7 tests) | done |
+| `export/PdfExporter.kt` — A4 PDF via `PdfDocument` + `StaticLayout` (Arabic shaping, per-paragraph bidi so Arabic lines are right-aligned, phone numbers LTR-isolated), pagination line by line, page footer; drawing goes through a `PageSink` so `PdfExporterTest` renders pages to PNG under Robolectric (sample: `docs/screenshots/export_pdf_page1.png`) | done |
+| `export/NotionExport.kt` + `NotionClient.kt` — page payload (meta paragraph, summary → headings / bullets / paragraphs, tasks → `to_do` with checked state, notes → quote + paragraph, transcript paragraphs with bold speaker), 2000-char rich-text chunks, first 100 blocks on create then `PATCH /blocks/{id}/children` in batches of 100, 429 retry with Retry-After, errors mapped to friendly messages (bad token / page not shared with integration / rate limit / network), partial-page URL kept; parent page accepts URL or id; `NotionExportTest` (6 tests) | done |
+| Settings → Notion group: integration token (encrypted like API keys) + parent page URL/ID with validation hint | done |
+| Detail: share button and ⋯ → "Export & share" open a glass sheet (PDF, Markdown / text, WhatsApp, Send to Notion with spinner; Notion row points to Settings when not configured). Files go to `cache/exports` (pruned after a day) and are shared through a `FileProvider` (`${applicationId}.exports`). WhatsApp: `ACTION_SEND` to `com.whatsapp`, then `com.whatsapp.w4b`, else the system chooser. Notion success/failure dialog with "Open in Notion" | done |
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
@@ -115,6 +119,8 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 (Bookmarks during recording shipped in Phase 1.)
 
 ## Known issues / notes
+- Notion export is untested against the real API (no token here). Very long transcripts become many blocks (one per line) and several append requests. If an append fails the page exists but is incomplete; the dialog then offers to open it.
+- PDF uses the system sans-serif font; Arabic rendering depends on the device's Arabic font (Samsung/Google ship Noto). The PDF layout was checked via Robolectric bitmap rendering, not a real `PdfDocument`.
 - The transcript is no longer wrapped in a `SelectionContainer` (long-press is now "add note"), so text can't be selected/copied there; use Share / Export instead.
 - 2026-10-18 ~19:45: the box was restored to an earlier snapshot after a hung screenshot run; uncommitted/unpushed Phase 3 work was lost and redone. Long Gradle runs now use `timeout`.
 - Task extraction runs once after each summary; recordings summarized before Phase 2 need "Extract from older recordings" (Tasks ⋯ menu or banner). Bulk extraction is sequential (one provider call per recording) and runs in the activity's ViewModel, so it stops if the app is killed.
@@ -140,6 +146,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 3. Fix device findings (bump `versionCode` for each release), then Phase 3 (bookmarks + comments).
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 3 item 2 — export & share: PDF, Markdown, WhatsApp, Send to Notion (+ Settings), tests, screenshots `export_*`.
 - 2026-10-18: Phase 3 item 1 — notes on transcript lines (long-press editor, inline glass notes, persisted, in Ask AI context), tests, screenshots `comment*`.
 - 2026-10-18: Phase 2 verified (build + lint + 74 tests), APK `riffado-v2-phase2.apk`.
 - 2026-10-18: Phase 2 item 3 — versionCode 2 / versionName 2.1.0-phase2.

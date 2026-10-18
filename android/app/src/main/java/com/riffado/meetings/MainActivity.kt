@@ -61,6 +61,7 @@ import com.riffado.meetings.ui.GlassTabBar
 import com.riffado.meetings.ui.MiniRecordingPill
 import com.riffado.meetings.ui.RecorderScreen
 import com.riffado.meetings.ui.TasksScreen
+import com.riffado.meetings.export.ExportActions
 import com.riffado.meetings.ui.TaskCalendar
 import com.riffado.meetings.ui.TaskExtractionUi
 import com.riffado.meetings.ui.rememberHaptics
@@ -105,6 +106,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
     var searchTrigger by rememberSaveable { mutableIntStateOf(0) }
     val haptics = rememberHaptics()
     val askViewModel: AskAiViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    var exportNotice by remember { mutableStateOf<ExportNotice?>(null) }
 
     val onImported: (String?) -> Unit = { id ->
         if (id != null) {
@@ -157,6 +159,27 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
             showRecorder = false
             screen = previous
         }
+    }
+
+    exportNotice?.let { notice ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { exportNotice = null },
+            title = { Text(stringResource(R.string.export_title)) },
+            text = { Text(notice.message) },
+            confirmButton = {
+                if (notice.url != null) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        exportNotice = null
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(notice.url))) }
+                    }) { Text(stringResource(R.string.notion_open)) }
+                } else {
+                    androidx.compose.material3.TextButton(onClick = { exportNotice = null }) { Text(stringResource(R.string.action_ok)) }
+                }
+            },
+            dismissButton = if (notice.url != null) {
+                { androidx.compose.material3.TextButton(onClick = { exportNotice = null }) { Text(stringResource(R.string.action_close)) } }
+            } else null,
+        )
     }
 
     BackHandler(enabled = showRecorder || screen != null || tab != AppTab.Home) {
@@ -287,6 +310,22 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                             onRenameSpeaker = { speaker, name -> viewModel.renameSpeaker(recording.id, speaker, name) },
                             onAsk = { screen = ASK_PREFIX + recording.id },
                             onSaveComment = { index, line, text -> viewModel.saveComment(recording.id, index, line, text) },
+                            exporting = viewModel.exporting.collectAsStateWithLifecycle().value,
+                            notionConfigured = settings.canNotion,
+                            onNotionSetup = {
+                                Toast.makeText(context, R.string.notion_not_configured, Toast.LENGTH_LONG).show()
+                                screen = null; tab = AppTab.Settings
+                            },
+                            onExport = { kind ->
+                                viewModel.export(recording.id, kind) { outcome ->
+                                    when (outcome) {
+                                        is AppViewModel.ExportOutcome.Share -> runCatching { context.startActivity(outcome.intent) }
+                                        is AppViewModel.ExportOutcome.WhatsApp -> ExportActions.shareToWhatsApp(context, outcome.text, outcome.title)
+                                        is AppViewModel.ExportOutcome.Notion -> exportNotice = ExportNotice(context.getString(R.string.notion_done), outcome.url)
+                                        is AppViewModel.ExportOutcome.Failed -> exportNotice = ExportNotice(outcome.message, outcome.url)
+                                    }
+                                }
+                            },
                             onExtractTasks = {
                                 viewModel.extractTasks(listOf(recording.id)) { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                             },
@@ -381,3 +420,5 @@ private fun AskAiRoute(vm: AskAiViewModel, scope: String?, scopeTitle: String?, 
         onBack = onBack,
     )
 }
+
+private data class ExportNotice(val message: String, val url: String?)

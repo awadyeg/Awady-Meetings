@@ -108,6 +108,8 @@ fun SettingsScreen(
     var sumModel by remember { mutableStateOf(initial.summary.model) }
     var language by remember { mutableStateOf(initial.language) }
     var auto by remember { mutableStateOf(initial.autoProcess) }
+    var notionToken by remember { mutableStateOf(initial.notionToken) }
+    var notionPage by remember { mutableStateOf(initial.notionParentPage) }
 
     var callEnabled by remember { mutableStateOf(callRecording.enabled) }
     var callAudioSource by remember { mutableStateOf(callRecording.audioSource) }
@@ -125,6 +127,8 @@ fun SettingsScreen(
                 summary = ProviderConfig(sumUrl, sumKey, sumModel),
                 language = language,
                 autoProcess = auto,
+                notionToken = notionToken,
+                notionParentPage = notionPage,
             ),
         )
         haptics.confirm()
@@ -218,6 +222,19 @@ fun SettingsScreen(
                 }
 
                 // ---- Call recording -----------------------------------------------------------
+                InsetGroup(header = stringResource(R.string.settings_notion), footer = stringResource(R.string.settings_notion_help)) {
+                    row { InsetTextFieldRow(stringResource(R.string.settings_notion_token), notionToken, { notionToken = it }, placeholder = "ntn_…", password = true, stacked = true) }
+                    row {
+                        InsetTextFieldRow(
+                            stringResource(R.string.settings_notion_page), notionPage, { notionPage = it },
+                            placeholder = "https://www.notion.so/…", keyboardType = KeyboardType.Uri, stacked = true,
+                        )
+                    }
+                    if (notionPage.isNotBlank() && com.riffado.meetings.export.NotionExport.parentPageId(notionPage) == null) {
+                        row { InsetContent { Text(stringResource(R.string.settings_notion_page_invalid), style = AppleType.footnote, color = c.red) } }
+                    }
+                }
+                Spacer(Modifier.height(22.dp))
                 InsetGroup(header = stringResource(R.string.settings_call_recording), footer = stringResource(R.string.settings_call_help)) {
                     row { InsetToggleRow(stringResource(R.string.settings_call_auto_record), callEnabled, { callEnabled = it }, icon = Icons.Filled.PhoneInTalk) }
                     row { AudioSourceRow(callAudioSource) { callAudioSource = it } }

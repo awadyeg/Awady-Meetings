@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -103,11 +104,23 @@ fun DetailScreen(
     onSaveComment: (lineIndex: Int, line: Speakers.Turn, text: String) -> Unit = { _, _, _ -> },
     previewEditLine: Int? = null,
     initialTab: Int? = null,
+    onExport: (com.riffado.meetings.export.ExportKind) -> Unit = {},
+    exporting: com.riffado.meetings.export.ExportKind? = null,
+    notionConfigured: Boolean = false,
+    onNotionSetup: () -> Unit = {},
+    previewExportSheet: Boolean = false,
+    onOpenPerson: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val c = Apple.colors
     var tab by rememberSaveable(recording.id) { mutableIntStateOf(initialTab ?: if (recording.summary != null) 0 else 1) }
     var editingLine by remember(recording.id) { mutableStateOf(previewEditLine) }
+    var exportSheet by remember(recording.id) { mutableStateOf(previewExportSheet) }
+    var wasExporting by remember { mutableStateOf(false) }
+    LaunchedEffect(exporting) {
+        if (exporting != null) wasExporting = true
+        else if (wasExporting) { wasExporting = false; exportSheet = false }
+    }
     val lines = remember(recording.transcript, recording.speakerTurns) { Comments.lines(recording) }
     val anchored = remember(recording.comments, lines) { Comments.anchor(recording.comments, lines.map { it.text }) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -129,16 +142,7 @@ fun DetailScreen(
     val collapsePx = with(LocalDensity.current) { 48.dp.toPx() }
     val haze = rememberHazeState()
     val topPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TopBarHeight
-    val share = {
-        val text = listOfNotNull(
-            recording.summary,
-            recording.transcript?.let { Speakers.applyNames(it, recording.speakerNames) },
-        ).joinToString("\n\n---\n\n")
-        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-            .putExtra(Intent.EXTRA_SUBJECT, recording.title)
-            .putExtra(Intent.EXTRA_TEXT, text)
-        context.startActivity(Intent.createChooser(send, recording.title))
-    }
+    val share = { exportSheet = true }
 
     CompositionLocalProvider(LocalHazeState provides haze) {
         Box(Modifier.fillMaxSize()) {
@@ -258,6 +262,11 @@ fun DetailScreen(
                                 )
                             }
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.export_title)) },
+                                leadingIcon = { Icon(Icons.Filled.IosShare, null) },
+                                onClick = { menu = false; exportSheet = true },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete), color = c.red) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, null, tint = c.red) },
                                 onClick = { menu = false; confirmDelete = true },
@@ -271,6 +280,17 @@ fun DetailScreen(
                 PlayerBar(
                     player, waveform, recording.bookmarks,
                     Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 12.dp, vertical = 10.dp),
+                )
+            }
+
+            if (exportSheet) {
+                ExportSheet(
+                    title = recording.title,
+                    busy = exporting,
+                    notionConfigured = notionConfigured,
+                    onExport = onExport,
+                    onNotionSetup = { exportSheet = false; onNotionSetup() },
+                    onDismiss = { exportSheet = false },
                 )
             }
 

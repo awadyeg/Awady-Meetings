@@ -5,6 +5,13 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffado.meetings.MeetingsApp
+import com.riffado.meetings.export.ExportActions
+import com.riffado.meetings.export.ExportData
+import com.riffado.meetings.export.ExportKind
+import com.riffado.meetings.export.NotionClient
+import com.riffado.meetings.export.NotionException
+import com.riffado.meetings.export.NotionExport
+import com.riffado.meetings.export.RecordingExport
 import com.riffado.meetings.ai.SpeakerNaming
 import com.riffado.meetings.ai.ProcessingWorker
 import com.riffado.meetings.callrecorder.CallParticipantResolver
@@ -118,6 +125,63 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.recordings.update(recordingId) {
                 it.copy(comments = com.riffado.meetings.data.Comments.upsert(it.comments, lineIndex, line, text, System.currentTimeMillis()))
+            }
+        }
+    }
+
+    // ---- Export ----
+    sealed interface ExportOutcome {
+        data class Share(val intent: android.content.Intent) : ExportOutcome
+        data class WhatsApp(val text: String, val title: String) : ExportOutcome
+        data class Notion(val url: String) : ExportOutcome
+        data class Failed(val message: String, val url: String? = null) : ExportOutcome
+    }
+
+    private val exportingState = MutableStateFlow<ExportKind?>(null)
+    /** The export currently running (null when idle). */
+    val exporting = exportingState.asStateFlow()
+
+    fun exportData(id: String): ExportData? {
+        val r = app.recordings.get(id) ?: return null
+        return ExportData(r, RecordingExport.tasksFor(r, app.tasks.tasks.value))
+    }
+
+    fun export(id: String, kind: ExportKind, onDone: (ExportOutcome) -> Unit) {
+        if (exportingState.value != null) return
+        val data = exportData(id) ?: return
+        exportingState.value = kind
+        viewModelScope.launch {
+            val outcome = try {
+                withContext(Dispatchers.IO) { runExport(data, kind) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("Export", "Export $kind failed", e)
+                if (kind == ExportKind.NOTION) ExportOutcome.Failed(ExportActions.notionError(app, e), (e as? NotionException)?.pageUrl)
+                else ExportOutcome.Failed(app.getString(com.riffado.meetings.R.string.export_failed, e.message ?: e.javaClass.simpleName))
+            }
+            exportingState.value = null
+            onDone(outcome)
+        }
+    }
+
+    private fun runExport(data: ExportData, kind: ExportKind): ExportOutcome = when (kind) {
+        ExportKind.PDF -> ExportOutcome.Share(
+            ExportActions.shareFileIntent(app, ExportActions.pdfFile(app, data), "application/pdf", data.recording.title),
+        )
+        ExportKind.MARKDOWN -> {
+            val file = ExportActions.markdownFile(app, data)
+            ExportOutcome.Share(ExportActions.shareFileIntent(app, file, "text/markdown", data.recording.title, file.readText()))
+        }
+        ExportKind.WHATSAPP -> ExportOutcome.WhatsApp(RecordingExport.shareText(data, ExportActions.labels(app)), data.recording.title)
+        ExportKind.NOTION -> {
+            val s = settings.value
+            val parent = NotionExport.parentPageId(s.notionParentPage)
+            if (s.notionToken.isBlank() || parent == null) {
+                ExportOutcome.Failed(app.getString(com.riffado.meetings.R.string.notion_not_configured))
+            } else {
+                val blocks = NotionExport.blocks(data, ExportActions.labels(app))
+                ExportOutcome.Notion(NotionClient.createPage(s.notionToken, parent, data.recording.title, blocks))
             }
         }
     }
