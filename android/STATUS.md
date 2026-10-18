@@ -64,7 +64,7 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | **Phase 3 Export & share (PDF, Markdown, WhatsApp, Notion)** | done — unit tests for Markdown / share text / Notion payloads, PDF layout rendered in tests; NOT tested against the live Notion API or on a device |
 | **Phase 3 Person page** | done — `PersonLogicTest`, screenshots; NOT device-tested |
 | **Phase 4 MCP server (Streamable HTTP, bearer auth, FGS)** | done — protocol + real-socket tests on localhost; NOT device-tested, not yet tried with a real agent client |
-| **Phase 4 MCP read-only tools** | todo |
+| **Phase 4 MCP read-only tools** | done — `McpToolsTest` against fake data + over HTTP; `ask` NOT tried against a live LLM through MCP |
 | **Phase 4 Settings "Connect AI agents (MCP)"** | todo |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
@@ -126,6 +126,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 | `mcp/McpHttpServer.kt` — `POST /mcp` only (GET/DELETE → 405 `Allow: POST`, other paths 404), JSON replies or a one-event SSE reply when the client accepts only `text/event-stream`, keep-alive, chunked request bodies, 1 MiB body limit (413), 8 worker threads. Binds `0.0.0.0` (LAN / Tailscale). `McpHttpServerTest` starts it on 127.0.0.1 in a plain JVM test and runs initialize → notifications/initialized → tools/list → tools/call over OkHttp (7 tests) | done |
 | Auth: `Authorization: Bearer rfd_…` (256-bit random, `McpToken`, stored encrypted via `KeystoreCipher`). Checked before routing, so a missing or wrong token gets 401 + `WWW-Authenticate: Bearer` on every path. Compared in constant time. Origin header: allowed only for localhost or the same IP the client dialled (DNS names refused → 403). `McpTokenTest` (4 tests) | done |
 | `mcp/McpService.kt` — foreground service (`specialUse`, subtype property in the manifest) started only while enabled; notification shows the URL and has Stop; optional partial wake lock + Wi-Fi low-latency lock ("keep awake", default on) so agents can connect with the screen off; port-in-use shown as an error. Re-synced on app launch and after boot / app update (`BootReceiver`) | done |
+| `mcp/McpTools.kt` — six read-only tools (annotated `readOnlyHint`; JSON Schema inputs; results = `structuredContent` object + the same JSON as a text block; user-facing failures → `isError: true`, bad arguments → -32602). Times are ISO 8601 with the phone's offset; date-only filters cover the whole local day. **list_recordings**: type / person / from / to / limit / offset, newest first, with people, status, summary preview, task / note / bookmark counts. **search_recordings**: all words must match across title, people, summary, transcript and notes (Arabic-normalised), ranked, with up to 3 snippets. **get_recording**: summary, transcript lines (speaker names, timestamps; `max_transcript_chars`, `transcript_truncated`), tasks, bookmarks, notes (re-anchored, orphans flagged). **list_tasks**: status / due range / person / recording, due-date order, overdue flag. **get_person**: exact or unique partial name (else the known people are listed), phone, calls / meetings, total time, open tasks, recordings. **ask**: the in-app Ask AI pipeline, now shared as `ai/AskAiEngine` (also used by the chat), scoped by person or recording, returns the answer + cited sources; 3-minute timeout. `McpToolsTest` (10 tests incl. end-to-end over HTTP) | done |
 
 ## Phase plan
 1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
@@ -171,6 +172,7 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 4. Fix device findings (bump `versionCode` for each release), then the MCP server phase.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 4 item 3 — MCP read-only tools (list/search/get recordings, tasks, person, ask) and `AskAiEngine` shared with the chat.
 - 2026-10-18: Phase 4 items 1–2 — embedded MCP server (Streamable HTTP, dual-era JSON-RPC) in a foreground service, bearer-token auth, Origin check, tests incl. a real localhost server.
 - 2026-10-18: Phase 3 verified (99 tests, lint clean), lint KTX fixes in new code, APK `riffado-v2-phase3.apk`.
 - 2026-10-18: Phase 3 item 4 — versionCode 3 / versionName 2.2.0-phase3.
