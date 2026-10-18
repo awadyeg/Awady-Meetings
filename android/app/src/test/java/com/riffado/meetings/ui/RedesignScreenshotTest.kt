@@ -34,6 +34,12 @@ class RedesignScreenshotTest {
     @Test fun detailTranscriptDark() = shot("detail_transcript_dark", true) { PreviewDetail(transcriptTab = true) }
     @Test fun tasksLight() = shot("tasks_light", false) { PreviewTasks() }
 
+    @Test fun askAiLight() = shot("ask_ai_light", false) { PreviewAskAi() }
+    @Test fun askAiEmptyDark() = shot("ask_ai_empty_dark", true) { PreviewAskAi(empty = true) }
+
+    @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
+    @Test fun askAiRecordingArabic() = shot("ask_ai_recording_ar", false) { PreviewAskAi(empty = true, scopeTitle = "أحمد حسن") }
+
     @Config(qualifiers = "ar-w411dp-h891dp-xxhdpi")
     @Test fun homeArabicRtl() = shot("home_ar_rtl", false) { PreviewHome() }
 }

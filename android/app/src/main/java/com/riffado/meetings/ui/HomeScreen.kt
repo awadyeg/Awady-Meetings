@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.GraphicEq
@@ -86,6 +88,7 @@ fun HomeScreen(
     onOpen: (String) -> Unit,
     onSettings: () -> Unit,
     focusSearch: Int = 0,
+    onAsk: () -> Unit = {},
     bottomInset: androidx.compose.ui.unit.Dp = 140.dp,
 ) {
     var filter by rememberSaveable { mutableIntStateOf(0) } // 0 all, 1 meetings, 2 calls
@@ -131,6 +134,9 @@ fun HomeScreen(
                             focusRequester = focus,
                         )
                     }
+                    item(key = "ask") {
+                        AskEntry(onAsk, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                    }
                     item(key = "filter") {
                         SegmentedControl(
                             listOf(stringResource(R.string.filter_all), stringResource(R.string.filter_meetings), stringResource(R.string.filter_calls)),
@@ -170,6 +176,7 @@ fun HomeScreen(
                 title = title,
                 collapsed = listState.collapseFraction(),
                 trailing = {
+                    GlassIconButton(Icons.Filled.AutoAwesome, stringResource(R.string.ask_title), onAsk, size = 40.dp, iconSize = 20.dp, tint = Apple.colors.purple)
                     GlassIconButton(Icons.Filled.FileDownload, stringResource(R.string.action_import), onImport, size = 40.dp, iconSize = 20.dp, tint = Apple.colors.tint)
                 },
             )
@@ -347,5 +354,25 @@ private fun EmptyState(searching: Boolean, onImport: () -> Unit) {
             Text(stringResource(R.string.home_empty), style = AppleType.subheadline, color = c.secondaryLabel, textAlign = TextAlign.Center)
             CapsuleButton(stringResource(R.string.action_import), onImport, icon = Icons.Filled.FileDownload)
         }
+    }
+}
+
+/** "✨ Ask AI about your recordings" glass row. */
+@Composable
+fun AskEntry(onClick: () -> Unit, modifier: Modifier = Modifier, label: String = stringResource(R.string.ask_entry)) {
+    val c = Apple.colors
+    val source = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    Row(
+        modifier.fillMaxWidth().height(44.dp).pressScale(source, 0.97f)
+            .glass(RoundedCornerShape(22.dp), elevation = 4.dp)
+            .clickable(source, indication = null, role = Role.Button) { haptics.tap(); onClick() }
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.AutoAwesome, null, tint = c.purple, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(label, style = AppleType.body, color = c.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.tertiaryLabel, modifier = Modifier.size(20.dp))
     }
 }

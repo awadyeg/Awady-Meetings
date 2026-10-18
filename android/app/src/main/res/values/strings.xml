@@ -190,4 +190,24 @@
     <string name="providers_exhausted_until">Out of credits until %1$s</string>
     <string name="providers_active">Active</string>
     <string name="providers_off">Off</string>
+    <string name="ask_title">Ask AI</string>
+    <string name="ask_clear">Clear chat</string>
+    <string name="ask_send">Send</string>
+    <string name="ask_sources">Sources</string>
+    <string name="ask_thinking">Searching your recordings…</string>
+    <string name="ask_hint_global">Ask about any meeting or call…</string>
+    <string name="ask_hint_recording">Ask about this recording…</string>
+    <string name="ask_scope_global">Answers come only from your recordings, with links to the sources. Uses your summary provider.</string>
+    <string name="ask_scope_recording">Asking about “%1$s”</string>
+    <string name="ask_suggest_1">What did I promise to do this week?</string>
+    <string name="ask_suggest_2">Summarize my recent calls</string>
+    <string name="ask_suggest_3">Which decisions were made?</string>
+    <string name="ask_suggest_4">Any deadlines coming up?</string>
+    <string name="ask_suggest_rec_1">Summarize in 3 bullets</string>
+    <string name="ask_suggest_rec_2">What are the action items?</string>
+    <string name="ask_suggest_rec_3">What did the other person ask for?</string>
+    <string name="ask_not_configured">Set up a summary provider in Settings (URL, key, model) to use Ask AI.</string>
+    <string name="ask_no_recordings">There are no transcribed recordings yet.</string>
+    <string name="ask_entry">Ask AI about your recordings</string>
+    <string name="ask_entry_recording">Ask AI about this recording</string>
 </resources>

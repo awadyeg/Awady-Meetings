@@ -93,6 +93,7 @@ fun DetailScreen(
     onDelete: () -> Unit,
     onRedetectSpeakers: () -> Unit = {},
     detectingSpeakers: Boolean = false,
+    onAsk: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val c = Apple.colors
@@ -207,6 +208,10 @@ fun DetailScreen(
                     GlassIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back), onBack, size = 40.dp, iconSize = 20.dp)
                 },
                 trailing = {
+                    GlassIconButton(
+                        Icons.Filled.AutoAwesome, stringResource(R.string.ask_title), onAsk, size = 40.dp, iconSize = 20.dp, tint = c.purple,
+                        enabled = recording.summary != null || recording.transcript != null,
+                    )
                     GlassIconButton(
                         Icons.Filled.Share, stringResource(R.string.action_share), share, size = 40.dp, iconSize = 20.dp,
                         enabled = recording.summary != null || recording.transcript != null,

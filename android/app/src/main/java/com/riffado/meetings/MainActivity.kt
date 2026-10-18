@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.riffado.meetings.ui.AppTab
+import com.riffado.meetings.ui.AskAiScreen
+import com.riffado.meetings.ui.AskAiViewModel
 import com.riffado.meetings.ui.AppViewModel
 import com.riffado.meetings.ui.GlassTabBar
 import com.riffado.meetings.ui.MiniRecordingPill
@@ -82,6 +84,8 @@ class MainActivity : ComponentActivity() {
 }
 
 private const val PROVIDER_MANAGEMENT = "provider_management"
+private const val ASK = "ask"
+private const val ASK_PREFIX = "ask:"
 
 @Composable
 private fun App(viewModel: AppViewModel, intent: Intent) {
@@ -96,6 +100,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
     var showRecorder by rememberSaveable { mutableStateOf(false) }
     var searchTrigger by rememberSaveable { mutableIntStateOf(0) }
     val haptics = rememberHaptics()
+    val askViewModel: AskAiViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     val onImported: (String?) -> Unit = { id ->
         if (id != null) {
@@ -172,6 +177,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                     onOpen = { screen = it },
                     onSettings = { tab = AppTab.Settings },
                     focusSearch = searchTrigger,
+                    onAsk = { screen = ASK },
                 )
                 AppTab.Tasks -> TasksScreen(recordings, onOpen = { screen = it })
                 AppTab.Settings -> SettingsScreen(
@@ -202,6 +208,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
         ) { current ->
             when (current) {
                 null -> Unit
+                ASK -> AskAiRoute(askViewModel, null, null, onOpen = { screen = it }, onBack = { screen = null })
                 PROVIDER_MANAGEMENT -> {
                     val transcriptionSettings by viewModel.transcriptionProviders.collectAsStateWithLifecycle()
                     ProviderManagementScreen(
@@ -213,7 +220,13 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                         onBack = { screen = null },
                     )
                 }
-                else -> {
+                else -> if (current.startsWith(ASK_PREFIX)) {
+                    val id = current.removePrefix(ASK_PREFIX)
+                    AskAiRoute(
+                        askViewModel, id, recordings.firstOrNull { it.id == id }?.title,
+                        onOpen = { screen = it }, onBack = { screen = id },
+                    )
+                } else {
                     val recording = recordings.firstOrNull { it.id == current }
                     if (recording == null) {
                         LaunchedEffect(current) { screen = null }
@@ -232,6 +245,7 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
                                 }
                             },
                             onRenameSpeaker = { speaker, name -> viewModel.renameSpeaker(recording.id, speaker, name) },
+                            onAsk = { screen = ASK_PREFIX + recording.id },
                             onDelete = {
                                 viewModel.delete(recording.id)
                                 screen = null
@@ -307,4 +321,18 @@ private fun App(viewModel: AppViewModel, intent: Intent) {
             )
         }
     }
+}
+
+@Composable
+private fun AskAiRoute(vm: AskAiViewModel, scope: String?, scopeTitle: String?, onOpen: (String) -> Unit, onBack: () -> Unit) {
+    val conversation by vm.conversation(scope).collectAsStateWithLifecycle()
+    AskAiScreen(
+        conversation = conversation,
+        scopeTitle = scopeTitle,
+        onAsk = { vm.ask(scope, it) },
+        onRetry = { vm.retry(scope) },
+        onClear = { vm.clear(scope) },
+        onOpenRecording = onOpen,
+        onBack = onBack,
+    )
 }

@@ -61,6 +61,22 @@ object PreviewData {
         summary = "# Weekly product sync\n## Summary\nThe team agreed to ship the redesign next sprint.\n## Key points\n- Glass tab bar is done\n- الملخص بالعربي بيظهر من اليمين\n## Action items\n- [ ] Sara prepares the release notes",
     )
 
+    val askConversation = Conversation(
+        entries = listOf(
+            ChatEntry(true, "What did we agree on the beta release?"),
+            ChatEntry(
+                false,
+                "You agreed to **ship the redesign next sprint** [1], and Ahmed confirmed the beta build is due **Thursday**, with an API review with the team [2].\n\n- Sara prepares the release notes [1]\n- Omar reviews the onboarding flow [1]",
+                sources = listOf(
+                    com.riffado.meetings.ai.AskAi.Source(1, "1", "Weekly product sync", now - H),
+                    com.riffado.meetings.ai.AskAi.Source(2, "2", "أحمد حسن", now - 2 * H),
+                ),
+            ),
+            ChatEntry(true, "إمتى ميعاد تسليم النسخة التجريبية؟"),
+        ),
+        busy = true,
+    )
+
     val levels = List(160) { i -> (abs(sin(i / 3.0)) * (0.3 + 0.7 * abs(sin(i / 17.0)))).toFloat() * 0.6f }
 }
 
@@ -110,6 +126,15 @@ fun PreviewTasks() {
         TasksScreen(PreviewData.recordings, onOpen = {})
         GlassTabBar(AppTab.Tasks, {}, recording = false, onRecord = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
     }
+}
+
+@Composable
+fun PreviewAskAi(empty: Boolean = false, scopeTitle: String? = null) {
+    AskAiScreen(
+        conversation = if (empty) Conversation() else PreviewData.askConversation,
+        scopeTitle = scopeTitle,
+        onAsk = {}, onRetry = {}, onClear = {}, onOpenRecording = {}, onBack = {},
+    )
 }
 
 @Preview(name = "Home – light", showSystemUi = true)

@@ -54,13 +54,14 @@ object OpenAiClient {
             ?: throw IOException("Transcription response has no text field")
     }
 
-    fun chat(config: ProviderConfig, system: String, user: String): String {
+    fun chat(config: ProviderConfig, system: String, user: String): String =
+        chat(config, listOf("system" to system, "user" to user))
+
+    /** Multi-turn chat; [messages] are (role, content) pairs with roles system/user/assistant. */
+    fun chat(config: ProviderConfig, messages: List<Pair<String, String>>): String {
         val payload = json.encodeToString(
             ChatRequest.serializer(),
-            ChatRequest(
-                model = config.model,
-                messages = listOf(ChatMessage("system", system), ChatMessage("user", user)),
-            ),
+            ChatRequest(model = config.model, messages = messages.map { (role, content) -> ChatMessage(role, content) }),
         )
         val response = execute(config, "chat/completions", payload.toRequestBody(JSON_TYPE))
         val obj = json.parseToJsonElement(response).jsonObject

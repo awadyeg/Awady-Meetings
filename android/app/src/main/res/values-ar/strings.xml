@@ -194,4 +194,24 @@
     <string name="providers_exhausted_until">الرصيد خلص حتى %1$s</string>
     <string name="providers_active">نشط</string>
     <string name="providers_off">متوقف</string>
+    <string name="ask_title">اسأل الذكاء الاصطناعي</string>
+    <string name="ask_clear">مسح المحادثة</string>
+    <string name="ask_send">إرسال</string>
+    <string name="ask_sources">المصادر</string>
+    <string name="ask_thinking">بدوّر في تسجيلاتك…</string>
+    <string name="ask_hint_global">اسأل عن أي اجتماع أو مكالمة…</string>
+    <string name="ask_hint_recording">اسأل عن التسجيل ده…</string>
+    <string name="ask_scope_global">الإجابات من تسجيلاتك بس، ومعاها لينكات للمصادر. بيستخدم مزود الملخص اللي ضابطه.</string>
+    <string name="ask_scope_recording">بتسأل عن «%1$s»</string>
+    <string name="ask_suggest_1">إيه اللي وعدت إني أعمله الأسبوع ده؟</string>
+    <string name="ask_suggest_2">لخّص آخر مكالماتي</string>
+    <string name="ask_suggest_3">إيه القرارات اللي اتاخدت؟</string>
+    <string name="ask_suggest_4">فيه مواعيد تسليم قريبة؟</string>
+    <string name="ask_suggest_rec_1">لخّصه في 3 نقط</string>
+    <string name="ask_suggest_rec_2">إيه المهام المطلوبة؟</string>
+    <string name="ask_suggest_rec_3">الطرف التاني طلب إيه؟</string>
+    <string name="ask_not_configured">اضبط مزود الملخص في الإعدادات (الرابط والمفتاح والموديل) عشان تستخدم اسأل الذكاء الاصطناعي.</string>
+    <string name="ask_no_recordings">مفيش تسجيلات متفرّغة لسه.</string>
+    <string name="ask_entry">اسأل الذكاء الاصطناعي عن تسجيلاتك</string>
+    <string name="ask_entry_recording">اسأل الذكاء الاصطناعي عن التسجيل ده</string>
 </resources>

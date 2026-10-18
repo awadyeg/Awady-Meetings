@@ -57,6 +57,8 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | Speaker naming (on-device voice profile + contact for the other side), re-detect | done (not device-tested) |
 | RTL for mixed Arabic/English | done; re-checked in redesign |
 | **Phase 1 Liquid Glass redesign** | done — builds, lint clean (warnings only), unit tests green; NOT device-tested |
+| **Phase 2 Ask AI** (global + per-recording chat with cited, tappable sources) | done — unit-tested retrieval; NOT tested against a live provider |
+| **Phase 2 Tasks + dates extraction + calendar** | in progress |
 
 ### Phase 1 — Liquid Glass redesign (done, awaiting device test)
 | Item | Status |
@@ -76,16 +78,28 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 | RTL pass: per-string direction (`TextStyle.auto`), LTR isolation for phone numbers, mirrored tab bar/segments/back arrow/scrubber | done |
 | Looping animations only while recording (`LocalStaticAnimations` freezes them in tests) | done |
 
+### Phase 2 — Ask AI + Tasks (in progress)
+| Item | Status |
+|---|---|
+| `ai/AskAi.kt` — retrieval: recordings → passages (summary + transcript chunks of ~1400 chars with speaker names), Arabic-aware tokenizer (normalisation, article stripping, en+ar stopwords), BM25 ranking (+title/contact and summary boosts, prefix match), context packed under a token budget (default 5000, chars/2.5 like `TranscriptChunker`), numbered sources `[n]`, fallback to latest summaries when nothing matches; `AskAiTest` (9 tests) | done |
+| `OpenAiClient.chat(config, messages)` multi-turn overload (uses the configured summary provider: Groq / OpenAI-compatible) | done |
+| `AskAiViewModel` — in-memory conversations per scope (global / recording id), last 6 turns as history, retries with smaller budget (×0.55, min 1500) on 413 / TPM 429 / context-length 400 | done |
+| `AskAiScreen` — glass top bar, user bubbles (tint) / assistant glass cards (markdown), numbered source chips → open recording, suggestions, typing indicator, glass composer; en + ar strings | done |
+| Entry points: ✨ in Home top bar + "Ask AI about your recordings" row under search (also reached from the Search tab), ✨ in Detail top bar (scoped to that recording) | done |
+| Tasks extraction (JSON), Tasks tab, calendar intents, re-extract | todo |
+| Version bump 2 / 2.1.0-phase2 | todo |
+
 ## Phase plan
-1. **Phase 1 — UI/UX redesign** (Liquid Glass). _In progress._
-2. Ask AI — chat over all recordings.
-3. Tasks + calendar — extract action items & dates, add to calendar.
+1. **Phase 1 — UI/UX redesign** (Liquid Glass). _Done, accepted._
+2. **Phase 2** — Ask AI (chat over recordings) + Tasks & dates extraction with calendar. _In progress._
 4. Bookmarks + comments — markers during recording, comments on transcript lines.
 5. Export — PDF, Notion, WhatsApp share.
 6. Person page — all calls/meetings/tasks per contact.
 7. MCP server — expose recordings/transcripts/tasks to external agents.
 
 ## Known issues / notes
+- Ask AI conversations are kept in memory only (lost when the process dies). Retrieval is keyword/BM25, not embeddings: synonyms or paraphrases with no shared words can miss; the fallback then uses the latest summaries.
+- Ask AI sends excerpts of transcripts/summaries to the configured summary provider (same privacy surface as summaries).
 - Nothing in the redesign has been tested on a physical device yet (Samsung, Android 14/15 is the target).
 - Haze blur needs Android 12+; older devices get a frosted (non-blurred) fill by design. Robolectric screenshots also show the fallback (no RenderEffect).
 - Only floating chrome (top bar, tab bar, player, pill, round buttons) uses real backdrop blur; list cards use a translucent "glass card" fill for scroll performance.
@@ -101,10 +115,10 @@ Scrolling content is marked `hazeSource(state)`; floating chrome reads `LocalHaz
 ## Next steps
 1. Install `riffado-v2-redesign-phase1.apk` on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
 2. Fix device findings, then bump `versionCode`.
-3. Phase 2: Ask AI (chat over transcripts; reuse the summary provider config).
-4. Tasks tab: persist checked state, due dates, calendar export (Phase 3).
+3. Phase 2 remaining: tasks extraction + Tasks tab + calendar; version bump.
 
 ## Changelog (newest first)
+- 2026-10-18: Phase 2 item 1 — Ask AI (retrieval core + tests, chat screen, global + per-recording entry points, ar strings, screenshots `ask_ai_*`).
 - 2026-10-18: Phase 1 complete: provider screen restyle, RTL fixes, screenshot tests, idle animation fix. APK built (com.riffado.meetings.v2, ~90 MB).
 - 2026-10-18: Settings + My voice redesigned as grouped inset lists; strings moved to resources (en + ar).
 - 2026-10-18: Detail screen redesign (player bar, waveform scrubber, seekable transcript).
