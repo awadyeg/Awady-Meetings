@@ -124,8 +124,8 @@ Verified 2026-10-18: `./gradlew assembleDebug lintDebug testDebugUnitTest` green
 
 ## Next steps
 1. Install `riffado-v2-phase2.apk` (versionCode 2, installs over Phase 1) on the phone; check blur, haptics, RTL, recorder flow (⏺ → full screen → minimize → pill → stop → lands on detail), call recording still works, QS tile/quick record still work.
-2. Fix device findings, then bump `versionCode`.
-4. Device test: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
+2. Device test Phase 2: Ask AI with Groq (`llama-3.3-70b-versatile` or similar), task extraction on an Arabic call, calendar insert with Google Calendar / Samsung Calendar.
+3. Fix device findings (bump `versionCode` for each release), then Phase 3 (bookmarks + comments).
 
 ## Changelog (newest first)
 - 2026-10-18: Phase 2 verified (build + lint + 74 tests), APK `riffado-v2-phase2.apk`.
