@@ -105,7 +105,8 @@ describe("provider-presets", () => {
 
         it("is true for every other preset", () => {
             for (const preset of PROVIDER_PRESETS) {
-                if (preset.name === "ElevenLabs") continue;
+                if (preset.name === "ElevenLabs" || preset.name === "Munsit")
+                    continue;
                 expect(supportsEnhancement(preset.name)).toBe(true);
             }
         });

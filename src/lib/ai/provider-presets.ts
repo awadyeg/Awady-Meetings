@@ -1,4 +1,9 @@
-export type TranscriptionStyle = "whisper" | "chat" | "gemini" | "elevenlabs";
+export type TranscriptionStyle =
+    | "whisper"
+    | "chat"
+    | "gemini"
+    | "elevenlabs"
+    | "munsit";
 
 export interface ProviderPreset {
     name: string;
@@ -96,6 +101,15 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
         defaultModel: "scribe_v2",
         transcriptionStyle: "elevenlabs",
         knownTranscriptionModels: ["scribe_v2", "scribe_v1"],
+        supportsEnhancement: false,
+    },
+    {
+        name: "Munsit",
+        baseUrl: "https://api.munsit.com/api/v1",
+        placeholder: "Your Munsit API key",
+        defaultModel: "munsit",
+        transcriptionStyle: "munsit",
+        knownTranscriptionModels: ["munsit", "munsit-en-ar"],
         supportsEnhancement: false,
     },
     {
