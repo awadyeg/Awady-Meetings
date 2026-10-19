@@ -49,6 +49,7 @@ import {
 } from "@/lib/transcription/format";
 import { geminiTranscribe } from "@/lib/transcription/gemini-transcribe";
 import { isRiffadoIncludedProviderId } from "@/lib/transcription/included-provider";
+import { munsitTranscribe } from "@/lib/transcription/munsit-transcribe";
 import { transcribeOpenAIDiarized } from "@/lib/transcription/openai-diarized-transcribe";
 import { upsertTranscription } from "@/lib/transcription/persist";
 import { emitEvent } from "@/lib/webhooks/emit";
@@ -435,6 +436,8 @@ async function transcribeRecordingInner(
             // - "gemini": Google Gemini native generateContent API (inlineData)
             // - "elevenlabs": ElevenLabs Scribe /v1/speech-to-text (xi-api-key,
             //   diarized words[] response)
+            // - "munsit": Munsit /api/v1/audio/transcribe (x-api-key,
+            //   { data: { transcription } } response; not OpenAI-compatible)
             // - "chat": OpenAI-compatible chat completions with input_audio
             //   (OpenRouter today; #122 -- /v1/audio/transcriptions 404s there)
             // - "whisper": OpenAI-compatible /v1/audio/transcriptions
@@ -505,7 +508,19 @@ async function transcribeRecordingInner(
                     decryptedFilename,
                 );
 
-                if (transcriptionStyle === "gemini") {
+                if (transcriptionStyle === "munsit") {
+                    const result = await munsitTranscribe({
+                        apiKey,
+                        model,
+                        file: audioFile,
+                        baseUrl: credentials.baseUrl,
+                        language: defaultLanguage,
+                        diarize,
+                        timeoutMs: env.WHISPER_REQUEST_TIMEOUT_MS,
+                    });
+                    transcriptionText = result.text;
+                    detectedLanguage = result.detectedLanguage;
+                } else if (transcriptionStyle === "gemini") {
                     const result = await geminiTranscribe({
                         apiKey,
                         model,
